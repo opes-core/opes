@@ -26,52 +26,13 @@ class Portfolio:
 
 
     # Caching essential values
-    def __init__(self, tickers=None):
+    def __init__(self):
         # Assigning base values
-        # "We are all consenting adults here"
-        self.tickers = None
-        self.train_data = None
-        self.weights = np.ones(len(tickers)) / len(tickers)
         self.metadata = {
             "tickers" : None,
-            "method" : None,
-            "weight" : self.weights
+            "weights" : None,
+            "method" : None
         }
-    
-    # Refreshing training data
-    def refresh(self, train_start=None, train_end=None, path=None):
-        if (train_start is None or train_end is None) and path is None:
-            logger.error("TRAINING PERIOD NOT PROVIDED")
-            raise PortfolioError("Training Period not specified")
-        elif path is not None:
-            logger.info("READING DATA")
-            data = readCSV(path)
-            if data.empty:
-                logger.error("DATA NON-EXISTENT")
-                raise DataError("No data in specified file")
-            logger.info("READ SUCCESSFUL")
-            tickers = data.columns.get_level_values(0).unique().tolist()
-            if set(self.tickers) != set(tickers):
-                logger.warning("TICKER SET MISMATCH DETECTED. UPDATING INTERNAL TICKER LIST TO MATCH DATA SOURCE")
-                self.tickers = tickers
-                self.weights = np.ones(len(self.tickers)) / len(self.tickers)
-            self.train_data = trimmer(self.tickers, data)
-        else:
-            try:
-                logger.info("FETCHING TRAINING DATA")
-                data = yf.download(tickers=self.tickers, start=train_start, end=train_end, group_by="ticker", auto_adjust=True)
-
-                if data.empty:
-                    logger.error("FETCH FAILED")
-                    raise DataError("No data returned from yfinance")
-                logger.info("FETCH SUCCESSFUL")
-
-                # Updating train data and metadata
-                self.train_data = trimmer(self.tickers, data)
-
-            except Exception as e:
-                logger.exception("FETCH FAILED")
-                raise DataError(f"Failed to fetch data due to the underlying error: {e}")
     
     # Returning stats of the portfolio as a dictionary
     def stats(self):
@@ -94,42 +55,68 @@ class Portfolio:
             self, 
             method="gmv", 
             risk_aversion=1.2, 
-            horizon=1, 
             confidence=0.9,
             fraction=1,
-            rf=0
+            rf=0,
+            train_data=None,
+            train_path=None,
+            covariance=None,
+            mean=None,
+            start_weights=None
         ):
         
+        # Checking train_data
+        if train_data is None and train_path is None:
+            logger.error("OPTIMIZATION FAILED. TRAINING PERIOD NOT PROVIDED")
+            raise PortfolioError("Training period not specified")
+        
+        # Checking training data path
+        if train_path is not None:
+            logger.info("READING DATA")
+            try:
+                data = readCSV(train_path)
+                if data.empty:
+                    logger.error("DATA NON-EXISTENT")
+                    raise DataError("No data in specified file")
+                logger.info("READ SUCCESSFUL")
+                tickers = data.columns.get_level_values(0).unique().tolist()
+                self.metadata["tickers"] = tickers
+                train_data = trimmer(tickers, data)
+            except Exception as e:
+                raise DataError("Invalid Training Path") from e
+        else:
+            train_data = trimmer(data)
+        
         # Resetting weights to prevent false convergence
-        tickers_length = len(self.tickers)
-        tempweights = np.ones(tickers_length) / tickers_length
-
-        # Checking covariance, mean and training data availability before optimization
-        if self.mean is None:
-            logger.warning("MEAN RETURN NOT SET. DEFAULTING TO SAMPLE MEAN")
-            self.setMean(method="sample")
-        if self.covar is None:
-            logger.warning("COVARIANCE NOT SET. DEFAULTING TO SAMPLE COVARIANCE")
-            self.setCovariance(method="sample")
-        if self.train_data is None:
-            logger.error("MEAN ESTIMATION FAILED. TRAINING PERIOD NOT PROVIDED")
-            raise PortfolioError("Training period not specified. Use refresh(train_start, train_end) method to update training data.")
+        if start_weights is None:
+            tickers_length = len(self.tickers)
+            start_weights = np.ones(tickers_length) / tickers_length
 
         # Available Optimizers
         optimizers = {
-            "gmv": [models.GMV, [tempweights, self.covar * horizon]],
-            "mdp": [models.MDP, [tempweights, self.covar * horizon, self.vols() * np.sqrt(horizon)]],
-            "mvo": [models.MVO, [tempweights, self.covar * horizon, risk_aversion, self.mean]],
-            "sharpe": [models.Sharpe, [tempweights, self.covar * horizon, self.mean, rf]],
-            "riskparity": [models.RP, [tempweights, self.covar * horizon]],
-            "cvar": [models.CVaR, [tempweights, confidence, self.train_data]],
-            "mcvar": [models.MCVaR, [tempweights, risk_aversion, confidence, self.train_data]],
-            "kelly": [models.Kelly, [tempweights, fraction, self.train_data]],
-            "erm": [models.ERM, [tempweights, risk_aversion, self.train_data]],
-            "crra": [models.CRRA, [tempweights, risk_aversion, self.train_data]],
-            "quadutil": [models.quadraticutility, [tempweights, risk_aversion, self.train_data]],
-            "evar": [models.EVaR, [tempweights, confidence, self.train_data]],
-            "1byn": [models.Equal, [tempweights]]
+
+            # Markowitz
+            "gmv": [models.GMV, [start_weights, train_data, covariance]],
+            "mvo": [models.MVO, [start_weights, train_data, covariance, risk_aversion, mean]],
+            "sharpe": [models.Sharpe, [start_weights, train_data, covariance, mean, rf]],
+
+            # Heuristics
+            "mdp": [models.MDP, [start_weights, train_data, covariance]],
+            "riskparity": [models.RP, [start_weights, train_data, covariance, np.sqrt(np.diag(covariance))]],
+            "1byn": [models.Equal, [start_weights]],
+
+            # Tail metrics
+            "cvar": [models.CVaR, [start_weights, confidence, train_data]],
+            "mcvar": [models.MCVaR, [start_weights, risk_aversion, confidence, train_data]],
+            "erm": [models.ERM, [start_weights, risk_aversion, train_data]],
+            "evar": [models.EVaR, [start_weights, confidence, train_data]],
+
+            # Gambler
+            "kelly": [models.Kelly, [start_weights, fraction, train_data]],
+
+            # Utility Functions
+            "quadutil": [models.quadraticutility, [start_weights, risk_aversion, train_data]],
+            "crra": [models.CRRA, [start_weights, risk_aversion, train_data]]
         }
 
         # Checking if optimizer is valid
