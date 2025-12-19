@@ -1,28 +1,12 @@
-from opes.portfolio import Portfolio
-from tabulate import tabulate
+from opes.methods.markowitz import MaxMean
+import yfinance as yf
 
 TICKERS = ["GME", "TSLA", "NVDA", "AAPL"]
-AMOUNT = 10000
+return_data = yf.download(tickers=TICKERS, start="2020-01-01", end="2024-01-01", group_by="ticker", auto_adjust=False)
 
-# Declaring portfolio object
-investments = Portfolio(tickers=TICKERS)
+investments = MaxMean(reg="l2", strength=0.01)
+weights = investments.optimize(data=return_data)
 
-# Training
-investments.refresh(path="C:\\Users\\nitin\\Downloads\\test.csv")
-
-# Stats before optimization
-print("\nPORTFOLIO DATA BEFORE OPTIMIZING")
-print(investments.stats())
-
-# Optimizing Portfolio
-investments.optimize(method="kelly", fraction=0.9)
-
-print("\nPORTFOLIO DATA AFTER OPTIMIZATION")
-print(investments.stats())
-
-# Backtest
-performance = investments.backtest(start_date="2010-01-01", end_date="2020-01-01", cost=20)
-print("\nPERFORMANCE METRICS (PORTFOLIO)")
-print(tabulate(list(performance[0].items()), headers=["METRIC", "VALUE"], tablefmt="plain"))
-print("\nPERFORMANCE METRICS (BENCHMARK)")
-print(tabulate(list(performance[1].items()), headers=["METRIC", "VALUE"], tablefmt="plain"))
+print(f"TICKERS: {investments.tickers}")
+print(f"MEAN: {investments.mean}")
+print(f"WEIGHTS: {weights}")

@@ -7,25 +7,52 @@ import pandas as pd
 
 from opes.errors import DataError, PortfolioError
 
-# Constant set
-REQUIRED_FIELDS = {"Open", "High", "Low", "Close", "Volume"}
+def find_regularizer(reg):
+    """
+    Finds and returns the user specified portfolio regularizer.
+    
+    Parameters
+    ----------
+    reg: str
+        Regularization scheme.
 
-# Regulizer Functions
-def find_regulizer(reg):
+    Raises
+    ------
+    PortfolioError if regulizer is unknown.
+    """
     regulizers = {
         None: lambda w: 0,
         "l2": lambda w: np.sum(w ** 2),
         "maxweight": lambda w: max(np.abs(w)),
         "entropy": lambda w: np.sum(np.abs(w) * np.log(np.abs(w) + 1e-12)),
     }
-    reg = str(reg).lower if reg is not None else reg
+    reg = str(reg).lower() if reg is not None else reg
     if reg in regulizers:
         return regulizers[reg]
     else:
         raise PortfolioError(f"Unknown regulizer: {reg}")
 
-# Function to test data integrity
 def test_integrity(tickers, weights=None, cov=None, mean=None, bounds=None):
+    """
+    Test data integrity before optimization.
+    
+    Parameters
+    ----------
+    tickers: sequence
+        Used as a reference for length and shape to find discrepancies in other parameters
+    weights: array-like
+        Portfolio weights. Must have the same length of tickers
+    cov: array-like
+        Covariance matrix of asset returns. Must be square, match the length of `tickers`, and be invertible.
+    mean: array-like
+        mean vector of asset returns. Must match the length of `tickers`
+    bounds: tuple[float, float]
+        weight bounds for each asset. Must have a length of 2 and be in ascending order
+
+    Raises
+    ------
+    DataError if any of the above conditions are not satisfied
+    """
     if mean is not None:
         if len(mean) != len(tickers):
             raise DataError(f"Mean vector shape mismatch. Expected {len(tickers)}, Got {mean.shape}")
@@ -43,7 +70,52 @@ def test_integrity(tickers, weights=None, cov=None, mean=None, bounds=None):
         bounds = tuple(bounds)
         if len(bounds) != 2:
             raise DataError(f"Invalid weight bounds length. Expected 2, Got {len(bounds)}")
+        if bounds[0] >= bounds[1]:
+            raise DataError(f"Invalid weight bounds. Bounds must be of the format (start, end)")
+
+def extract_trim(data):
+    """
+    Extract and trim return data to enforce common trading history across all assets.
     
+    Parameters
+    ----------
+    data: pandas.DataFrame
+        OHLCV data indexed by time, with asset-specific columns.
+    
+    Returns
+    -------
+    array-like
+        trimmed return data for all assets
+    """
+    if data is None:
+        raise DataError("Data not specified")
+    returnMatrix = data.xs('Close', axis=1, level=1).pct_change(fill_method=None).dropna().values.tolist()
+    min_len = min(len(r) for r in returnMatrix)
+    tickers = data.columns.get_level_values(0).unique().tolist()
+    return tickers, np.array([r[-min_len:] for r in returnMatrix]).T
+
+def find_constraint(bounds):
+    """
+    Returns a sum constraint function based on per-asset bounds.
+
+    Parameters
+    ----------
+    bounds : tuple[float, float]
+        Lower and upper bound for individual weights.
+
+    Returns
+    -------
+    function
+        Constraint function f(x) such that f(x) == 0 enforces
+        the desired sum of weights.
+    """
+    if bounds[0] < 0 and bounds[1] > 0:
+        return lambda x: x.sum()
+    elif bounds[0] < 0 and bounds[1] < 0:
+        return lambda x: x.sum() + 1
+    else:
+        return lambda x: x.sum() - 1
+
 # Slippage function
 def slippage(weights, previous_returns, cost):
     realized_weights = weights * (1 + previous_returns)
@@ -53,7 +125,21 @@ def slippage(weights, previous_returns, cost):
 
 # Performance metrics analyzer
 def metrics(returns, T):
+    """
+    Analyze strategy performance using multiple metrics.
+    
+    Parameters
+    ----------
+    returns: array-like
+        Strategy returns to be analyzed
+    T: int
+        Back-test horizon
 
+    Returns
+    -------
+    dict
+        Dictionary containing performance metrics.
+    """
     returns = np.array(returns)
     average = returns.mean()
     downside_vol = returns[returns < 0].std()
@@ -94,17 +180,6 @@ def metrics(returns, T):
 
     return dict(zip(performance_metrics, results))
 
-# Data trimming function
-def trimmer(tickers, data):
-    if data is None:
-        raise DataError("Portfolio data not specified")
-    returnMatrix = []
-    for ticker in tickers:
-        asset = data[ticker]["Close"].pct_change(fill_method=None).dropna().values
-        returnMatrix.append(asset)
-    min_len = min(len(r) for r in returnMatrix)
-    return np.array([r[-min_len:] for r in returnMatrix]).T
-
 # Plotting function
 def plotter(portfolio, benchmark, dates, show, save):
     
@@ -140,43 +215,3 @@ def plotter(portfolio, benchmark, dates, show, save):
         plt.savefig(f"plot_{int(time.time()*1000)}.png", dpi=300, bbox_inches='tight')
     if show:
         plt.show()
-
-# CSV reader function
-def readCSV(path):
-    try:
-        data = pd.read_csv(
-            path,
-            header=[0, 1],
-            index_col=0,
-            parse_dates=True
-        )
-    
-    # FileNotFound
-    except Exception as e:
-        raise DataError(f"Failed to read CSV: {path}") from e
-
-    # Index validation (Must have dates)
-    if not isinstance(data.index, pd.DatetimeIndex):
-        raise DataError("Index is not DatetimeIndex")
-
-    # Duplicate data
-    data = data.sort_index()
-    if not data.index.is_unique:
-        raise DataError("Duplicate dates in index")
-
-    # Column format mismatch
-    if not isinstance(data.columns, pd.MultiIndex):
-        raise DataError("Columns are not MultiIndex (Ticker, Field)")
-
-    # Column Mismatch
-    if data.columns.nlevels != 2:
-        raise DataError("Expected 2-level columns")
-    
-    # Checking for required fields
-    fields = set(data.columns.get_level_values(1).unique())
-    if not REQUIRED_FIELDS.issubset(fields):
-        raise DataError(f"Missing required fields: {REQUIRED_FIELDS - fields}")
-
-    # Changing values to numbers
-    data = data.apply(pd.to_numeric, errors="raise")
-    return data
