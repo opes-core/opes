@@ -1,18 +1,49 @@
-# Standard lib
 import time
 
-# Third-party libs
 import numpy as np
 import scipy.stats as scistats
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# Local libs
-from opes.errors import DataError
+from opes.errors import DataError, PortfolioError
 
 # Constant set
 REQUIRED_FIELDS = {"Open", "High", "Low", "Close", "Volume"}
 
+# Regulizer Functions
+def find_regulizer(reg):
+    regulizers = {
+        None: lambda w: 0,
+        "l2": lambda w: np.sum(w ** 2),
+        "maxweight": lambda w: max(np.abs(w)),
+        "entropy": lambda w: np.sum(np.abs(w) * np.log(np.abs(w) + 1e-12)),
+    }
+    reg = str(reg).lower if reg is not None else reg
+    if reg in regulizers:
+        return regulizers[reg]
+    else:
+        raise PortfolioError(f"Unknown regulizer: {reg}")
+
+# Function to test data integrity
+def test_integrity(tickers, weights=None, cov=None, mean=None, bounds=None):
+    if mean is not None:
+        if len(mean) != len(tickers):
+            raise DataError(f"Mean vector shape mismatch. Expected {len(tickers)}, Got {mean.shape}")
+    if cov is not None:
+        if len(tickers) != cov.shape[0] or (cov.shape[0] != cov.shape[1]):
+            raise DataError(f"Covariance matrix shape mismatch. Expected ({len(tickers)}, {len(tickers)}), Got {cov.shape}")
+        try:
+            np.linalg.inv(cov)
+        except np.linal.LinAlgError:
+            raise DataError(f"Singular covariance matrix")
+    if weights is not None:
+        if len(weights) != len(tickers):
+            raise DataError(f"Weight vector shape mismatch. Expected {len(tickers)}, Got {weights.shape}")
+    if bounds is not None:
+        bounds = tuple(bounds)
+        if len(bounds) != 2:
+            raise DataError(f"Invalid weight bounds length. Expected 2, Got {len(bounds)}")
+    
 # Slippage function
 def slippage(weights, previous_returns, cost):
     realized_weights = weights * (1 + previous_returns)
@@ -65,6 +96,8 @@ def metrics(returns, T):
 
 # Data trimming function
 def trimmer(tickers, data):
+    if data is None:
+        raise DataError("Portfolio data not specified")
     returnMatrix = []
     for ticker in tickers:
         asset = data[ticker]["Close"].pct_change(fill_method=None).dropna().values
