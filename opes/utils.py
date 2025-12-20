@@ -32,7 +32,7 @@ def find_regularizer(reg):
     else:
         raise PortfolioError(f"Unknown regulizer: {reg}")
 
-def test_integrity(tickers, weights=None, cov=None, mean=None, bounds=None):
+def test_integrity(tickers, weights=None, cov=None, mean=None, bounds=None, kelly_fraction=None):
     """
     Test data integrity before optimization.
     
@@ -48,6 +48,8 @@ def test_integrity(tickers, weights=None, cov=None, mean=None, bounds=None):
         mean vector of asset returns. Must match the length of `tickers`
     bounds: tuple[float, float]
         weight bounds for each asset. Must have a length of 2 and be in ascending order
+    kelly_fraction: float
+        kelly criterion fraction. Must be within (0,1])
 
     Raises
     ------
@@ -72,6 +74,9 @@ def test_integrity(tickers, weights=None, cov=None, mean=None, bounds=None):
             raise DataError(f"Invalid weight bounds length. Expected 2, Got {len(bounds)}")
         if bounds[0] >= bounds[1]:
             raise DataError(f"Invalid weight bounds. Bounds must be of the format (start, end)")
+    if kelly_fraction is not None:
+        if kelly_fraction <= 0 or kelly_fraction > 1:
+            raise DataError(f"Invalid Kelly criterion fraction. Must be bounded within (0,1], Got {kelly_fraction}")
 
 def extract_trim(data):
     """

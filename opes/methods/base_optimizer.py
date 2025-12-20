@@ -4,24 +4,37 @@ from opes.errors import PortfolioError
 
 class Optimizer(ABC):
     """
-    Optimizer template
-    
-    Contains:
-    optimize(self, data) 
-        Optimizes the portfolio and returns weights
-    stats(self) 
-        Returns detailed portfolio statistics
+    Abstract base class for portfolio optimization strategies.
+
+    Defines the standard interface for calculating portfolio weights and 
+    generating portfolio concentration statistics.
     """
     def __init__(self):
+        """
+        Initializes the optimizer with empty weights and tickers.
+        """
         self.weights = None
         self.tickers = None
     
     @abstractmethod
     def optimize(self, data):
+        """
+        Abstract method to optimize portfolio weights based on the provided data.
+
+        :param data: Input financial data (e.g., OHLCV or returns).
+        :return: Optimized weight vector.
+        """
         pass
     
     def stats(self):
+        """
+        Calculates and returns portfolio concentration and diversification statistics.
 
+        Includes Portfolio Entropy, Herfindahl Index, and maximum weight allocation.
+
+        :return: Dictionary containing tickers, weights, and concentration metrics.
+        :raises PortfolioError: If weights have not been calculated via optimization.
+        """
         if self.weights is None:
             raise PortfolioError("Weights not optimized")
         else:
