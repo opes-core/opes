@@ -8,18 +8,6 @@ import pandas as pd
 from opes.errors import DataError, PortfolioError
 
 def find_regularizer(reg):
-    """
-    Finds and returns the user specified portfolio regularizer.
-    
-    Parameters
-    ----------
-    reg: str
-        Regularization scheme.
-
-    Raises
-    ------
-    PortfolioError if regulizer is unknown.
-    """
     regulizers = {
         None: lambda w: 0,
         "l2": lambda w: np.sum(w ** 2),
@@ -32,42 +20,21 @@ def find_regularizer(reg):
     else:
         raise PortfolioError(f"Unknown regulizer: {reg}")
 
-def test_integrity(tickers, weights=None, cov=None, mean=None, bounds=None, kelly_fraction=None):
-    """
-    Test data integrity before optimization.
-    
-    Parameters
-    ----------
-    tickers: sequence
-        Used as a reference for length and shape to find discrepancies in other parameters
-    weights: array-like
-        Portfolio weights. Must have the same length of tickers
-    cov: array-like
-        Covariance matrix of asset returns. Must be square, match the length of `tickers`, and be invertible.
-    mean: array-like
-        mean vector of asset returns. Must match the length of `tickers`
-    bounds: tuple[float, float]
-        weight bounds for each asset. Must have a length of 2 and be in ascending order
-    kelly_fraction: float
-        kelly criterion fraction. Must be within (0,1])
-
-    Raises
-    ------
-    DataError if any of the above conditions are not satisfied
-    """
+def test_integrity(tickers, weights=None, cov=None, mean=None, bounds=None, kelly_fraction=None, confidence=None):
+    asset_quantity = len(tickers)
     if mean is not None:
-        if len(mean) != len(tickers):
-            raise DataError(f"Mean vector shape mismatch. Expected {len(tickers)}, Got {mean.shape}")
+        if len(mean) != asset_quantity:
+            raise DataError(f"Mean vector shape mismatch. Expected {asset_quantity}, Got {mean.shape}")
     if cov is not None:
-        if len(tickers) != cov.shape[0] or (cov.shape[0] != cov.shape[1]):
-            raise DataError(f"Covariance matrix shape mismatch. Expected ({len(tickers)}, {len(tickers)}), Got {cov.shape}")
+        if asset_quantity != cov.shape[0] or (cov.shape[0] != cov.shape[1]):
+            raise DataError(f"Covariance matrix shape mismatch. Expected ({asset_quantity}, {asset_quantity}), Got {cov.shape}")
         try:
             np.linalg.inv(cov)
         except np.linal.LinAlgError:
             raise DataError(f"Singular covariance matrix")
     if weights is not None:
-        if len(weights) != len(tickers):
-            raise DataError(f"Weight vector shape mismatch. Expected {len(tickers)}, Got {weights.shape}")
+        if len(weights) != asset_quantity:
+            raise DataError(f"Weight vector shape mismatch. Expected {asset_quantity}, Got {weights.shape}")
     if bounds is not None:
         bounds = tuple(bounds)
         if len(bounds) != 2:
@@ -77,21 +44,11 @@ def test_integrity(tickers, weights=None, cov=None, mean=None, bounds=None, kell
     if kelly_fraction is not None:
         if kelly_fraction <= 0 or kelly_fraction > 1:
             raise DataError(f"Invalid Kelly criterion fraction. Must be bounded within (0,1], Got {kelly_fraction}")
+    if confidence is not None:
+        if confidence <=0 or confidence >= 1:
+            raise DataError(f"Invalid confidence value. Must be bounded within (0,1), Got {confidence}")
 
 def extract_trim(data):
-    """
-    Extract and trim return data to enforce common trading history across all assets.
-    
-    Parameters
-    ----------
-    data: pandas.DataFrame
-        OHLCV data indexed by time, with asset-specific columns.
-    
-    Returns
-    -------
-    array-like
-        trimmed return data for all assets
-    """
     if data is None:
         raise DataError("Data not specified")
     returnMatrix = data.xs('Close', axis=1, level=1).pct_change(fill_method=None).dropna().values.tolist()
@@ -99,27 +56,15 @@ def extract_trim(data):
     tickers = data.columns.get_level_values(0).unique().tolist()
     return tickers, np.array([r[-min_len:] for r in returnMatrix]).T
 
-def find_constraint(bounds):
-    """
-    Returns a sum constraint function based on per-asset bounds.
-
-    Parameters
-    ----------
-    bounds : tuple[float, float]
-        Lower and upper bound for individual weights.
-
-    Returns
-    -------
-    function
-        Constraint function f(x) such that f(x) == 0 enforces
-        the desired sum of weights.
-    """
+def find_constraint(bounds, constraint_type=1):
     if bounds[0] < 0 and bounds[1] > 0:
-        return lambda x: x.sum()
-    elif bounds[0] < 0 and bounds[1] < 0:
-        return lambda x: x.sum() + 1
+        shift = 0
+    elif bounds[1] < 0:
+        shift = 1
     else:
-        return lambda x: x.sum() - 1
+        shift = -1
+    slicer = slice(None) if constraint_type == 1 else slice(None, -1)
+    return lambda x: x[slicer].sum() + shift
 
 # Slippage function
 def slippage(weights, previous_returns, cost):
@@ -130,21 +75,6 @@ def slippage(weights, previous_returns, cost):
 
 # Performance metrics analyzer
 def metrics(returns, T):
-    """
-    Analyze strategy performance using multiple metrics.
-    
-    Parameters
-    ----------
-    returns: array-like
-        Strategy returns to be analyzed
-    T: int
-        Back-test horizon
-
-    Returns
-    -------
-    dict
-        Dictionary containing performance metrics.
-    """
     returns = np.array(returns)
     average = returns.mean()
     downside_vol = returns[returns < 0].std()

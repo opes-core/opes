@@ -1,11 +1,12 @@
-from opes.methods import markowitz, utility_theory as ut
+from opes.methods import markowitz, utility_theory as eut, risk_metrics as rm
 import yfinance as yf
+import numpy as np
 
-TICKERS = ["GME", "TSLA", "NVDA", "AAPL", "BRK-B", "SHV", "TLT", "PFE"]
+TICKERS = ["GME", "TSLA", "NVDA", "AAPL", "BRK-B", "PFE"]
 return_data = yf.download(tickers=TICKERS, start="2020-01-01", end="2025-01-01", group_by="ticker", auto_adjust=False)
 
-optimizer = ut.HARA(risk_aversion=1.1)
+optimizer = rm.MeanEVaR(confidence=0.9, risk_aversion=0.3)
 weights = optimizer.optimize(data=return_data)
 statistics = optimizer.stats()
 for key in statistics:
-    print(f"{key}: {statistics[key]}")
+    print(f"{key}: {round(statistics[key], 3) if type(statistics[key]) == np.float64 else statistics[key]}")

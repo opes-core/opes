@@ -1,0 +1,298 @@
+import numpy as np
+import pandas as pd
+from scipy.optimize import minimize
+
+from opes.methods.base_optimizer import Optimizer
+from ..utils import extract_trim, find_regularizer, test_integrity, find_constraint
+from ..errors import OptimizationError, PortfolioError
+
+class CVaR(Optimizer):
+    """
+    Optimizer for minimizing the Conditional Value at Risk (CVaR), also known as Expected Shortfall.
+
+    This class minimizes the tail risk of the portfolio at a specific confidence level 
+    using the Rockafellar-Uryasev linear programming formulation.
+    """
+    def __init__(self, confidence=0.95, reg=None, strength=0):
+        """
+        Initializes the CVaR optimizer.
+
+        :param confidence: The confidence level (alpha) for the VaR/CVaR calculation (e.g., 0.95).
+        :param reg: A regularization function or name.
+        :param strength: Scalar multiplier for the regularization penalty.
+        """
+        self.identity = "cvar"
+        self.reg = find_regularizer(reg)
+        self.strength = strength
+        self.alpha = confidence
+
+        self.tickers = None
+        self.weights = None
+    
+    def prepare_optimization_inputs(self, data, weight_bounds, w):
+        """
+        Prepares returns, tickers, and initial weights while validating CVaR parameters.
+
+        :param data: Input OHLCV data grouped by ticker.
+        :param weight_bounds: Tuple of (min_weight, max_weight).
+        :param w: Initial weights.
+        :return: Trimmed return data array.
+        """
+        # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
+        self.tickers, data = extract_trim(data)
+        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+
+        # Functions to test data integrity and find optimization constraint
+        test_integrity(tickers=self.tickers, weights=self.weights, bounds=weight_bounds, confidence=self.alpha)
+        return data
+    
+    def optimize(self, data=None, weight_bounds=(0,1), w=None):
+        """
+        Executes CVaR optimization by minimizing the auxiliary objective function 
+        including Value-at-Risk as a decision variable.
+
+        :param data: Input data for optimization.
+        :param weight_bounds: Boundary constraints for asset weights.
+        :param w: Initial weights vector.
+        :return: Optimized weight vector.
+        :raises OptimizationError: If the SLSQP solver fails to converge.
+        """
+        # Preparing optimization and finding constraint
+        trimmed_return_data = self.prepare_optimization_inputs(data, weight_bounds, w)
+        constraint = find_constraint(weight_bounds, constraint_type=2)
+        w = self.weights
+        
+        # Optimization objective and results
+        # Appending initial VaR value, 1, to parameter array
+        param_array = np.append(w, 1)
+        def f(x):
+            w, v = x[:-1], x[-1]
+            X = -trimmed_return_data.T @ w
+            excess = np.mean(np.maximum(X - v, 0.0))
+            return (v + excess / (1 - self.alpha) + self.strength * self.reg(w))
+        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(None,None)], constraints= [{'type':'eq','fun': constraint}])
+        if result.success:
+            self.weights = result.x[:-1]
+            return self.weights
+        else:
+            raise OptimizationError("CVaR optimization failed")
+
+class MeanCVaR(Optimizer):
+    """
+    Optimizer for Mean-CVaR portfolio efficiency.
+
+    Solves the trade-off: min(γ * CVaR - (1-γ) * Mean), where γ represents 
+    the risk aversion toward tail events.
+    """
+    def __init__(self, risk_aversion=0.5, confidence=0.95, reg=None, strength=0):
+        """
+        Initializes the Mean-CVaR optimizer.
+
+        :param risk_aversion: Weight applied to the CVaR component vs the mean return.
+        :param confidence: The confidence level (alpha) for CVaR calculation.
+        :param reg: Regularization function.
+        :param strength: Regularization strength.
+        """
+        self.identity = "mcvar"
+        self.reg = find_regularizer(reg)
+        self.strength = strength
+        self.alpha = confidence
+        self.risk_aversion = risk_aversion
+        self.mean = None
+
+        self.tickers = None
+        self.weights = None
+    
+    def prepare_optimization_inputs(self, data, weight_bounds, w):
+        """
+        Extracts returns, calculates mean return vector, and validates CVaR parameters.
+
+        :param data: Input OHLCV data grouped by ticker.
+        :param weight_bounds: Weight constraints.
+        :param w: Initial weights.
+        :return: Cleaned return data array.
+        """
+        # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
+        self.tickers, data = extract_trim(data)
+        self.mean = np.mean(data, axis=1)
+        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+
+        # Functions to test data integrity and find optimization constraint
+        test_integrity(tickers=self.tickers, weights=self.weights, mean=self.mean, bounds=weight_bounds, confidence=self.alpha)
+        return data
+    
+    def optimize(self, data=None, weight_bounds=(0,1), w=None):
+        """
+        Executes Mean-CVaR optimization.
+        
+        Minimizes the objective: (risk_aversion * CVaR) - mean_return + penalty.
+
+        :param data: Input optimization data.
+        :param weight_bounds: Weight constraints.
+        :param w: Initial weights.
+        :return: Optimized weight vector.
+        """
+        # Preparing optimization and finding constraint
+        trimmed_return_data = self.prepare_optimization_inputs(data, weight_bounds, w)
+        constraint = find_constraint(weight_bounds, constraint_type=2)
+        w = self.weights
+        
+        # Optimization objective and results
+        # Appending initial VaR value, 1, to parameter array
+        param_array = np.append(w, 1)
+        def f(x):
+            w, v = x[:-1], x[-1]
+            X = -trimmed_return_data.T @ w
+            excess = np.mean(np.maximum(X - v, 0.0))
+            mean  = self.mean @ w
+            return (self.risk_aversion * (v + excess / (1 - self.alpha)) + self.strength * self.reg(w) - mean)
+        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(None,None)], constraints= [{'type':'eq','fun': constraint}])
+        if result.success:
+            self.weights = result.x[:-1]
+            return self.weights
+        else:
+            raise OptimizationError("Mean CVaR optimization failed")
+
+class EVaR(Optimizer):
+    """
+    Optimizer for minimizing Entropic Value at Risk (EVaR).
+
+    EVaR is a coherent risk measure derived from the Chernoff bound, providing 
+    a tighter upper bound for Value at Risk and CVaR.
+    """
+    def __init__(self, confidence=0.85, reg=None, strength=0):
+        """
+        Initializes the EVaR optimizer.
+
+        :param confidence: The confidence level (alpha) for the entropic risk measure.
+        :param reg: Regularization function.
+        :param strength: Regularization strength.
+        """
+        self.identity = "evar"
+        self.reg = find_regularizer(reg)
+        self.strength = strength
+        self.alpha = confidence
+
+        self.tickers = None
+        self.weights = None
+    
+    def prepare_optimization_inputs(self, data, weight_bounds, w):
+        """
+        Extracts tickers and return data for EVaR processing.
+
+        :param data: Input OHLCV data grouped by ticker.
+        :param weight_bounds: Weight constraints.
+        :param w: Initial weights.
+        :return: Cleaned return data array.
+        """
+        # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
+        self.tickers, data = extract_trim(data)
+        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+
+        # Functions to test data integrity and find optimization constraint
+        test_integrity(tickers=self.tickers, weights=self.weights, bounds=weight_bounds, confidence=self.alpha)
+        return data
+    
+    def optimize(self, data=None, weight_bounds=(0,1), w=None):
+        """
+        Executes Entropic Value at Risk optimization by minimizing the 
+        logarithmic moment generating function of the portfolio returns.
+
+        :param data: Input data for optimization.
+        :param weight_bounds: Boundary constraints for weights.
+        :param w: Initial weights vector.
+        :return: Optimized weight vector.
+        """
+        # Preparing optimization and finding constraint
+        trimmed_return_data = self.prepare_optimization_inputs(data, weight_bounds, w)
+        constraint = find_constraint(weight_bounds, constraint_type=2)
+        w = self.weights
+        
+        # Optimization objective and results
+        # Appending dual variable value as 1 to parameter array
+        param_array = np.append(w, 1)
+        def f(x):
+            w,s = x[:-1], x[-1]
+            X = trimmed_return_data.T @ w
+            return (1/s) * (np.log(np.mean(np.exp(-s * X))) - np.log(1 - self.alpha)) + self.strength * self.reg(w)
+        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(1e-8,None)], constraints= [{'type':'eq','fun': constraint}])
+        if result.success:
+            self.weights = result.x[:-1]
+            return self.weights
+        else:
+            raise OptimizationError("EVaR optimization failed")
+
+class MeanEVaR(Optimizer):
+    """
+    Optimizer for Mean-EVaR portfolio efficiency.
+
+    Maximizes the return of the portfolio relative to its Entropic Value at Risk, 
+    weighted by a risk aversion coefficient.
+    """
+    def __init__(self, risk_aversion=0.5, confidence=0.85, reg=None, strength=0):
+        """
+        Initializes the Mean-EVaR optimizer.
+
+        :param risk_aversion: Scalar weighting the trade-off between mean and EVaR.
+        :param confidence: The confidence level for the EVaR risk measure.
+        :param reg: Regularization function.
+        :param strength: Regularization strength.
+        """
+        self.identity = "mevar"
+        self.reg = find_regularizer(reg)
+        self.strength = strength
+        self.alpha = confidence
+        self.risk_aversion = risk_aversion
+        self.mean = None
+
+        self.tickers = None
+        self.weights = None
+    
+    def prepare_optimization_inputs(self, data, weight_bounds, w):
+        """
+        Processes data and calculates mean returns for the Mean-EVaR framework.
+
+        :param data: Input OHLCV data grouped by ticker.
+        :param weight_bounds: Tuple of (min_weight, max_weight).
+        :param w: Initial weights.
+        :return: Cleaned return data array.
+        """
+        # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
+        self.tickers, data = extract_trim(data)
+        self.mean = np.mean(data, axis=1)
+        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+
+        # Functions to test data integrity and find optimization constraint
+        test_integrity(tickers=self.tickers, weights=self.weights, bounds=weight_bounds, confidence=self.alpha)
+        return data
+    
+    def optimize(self, data=None, weight_bounds=(0,1), w=None):
+        """
+        Executes Mean-EVaR optimization.
+        
+        Minimizes: (risk_aversion * EVaR) - mean_return + penalty.
+
+        :param data: Input optimization data.
+        :param weight_bounds: Weight constraints.
+        :param w: Initial weights.
+        :return: Optimized weight vector.
+        """
+        # Preparing optimization and finding constraint
+        trimmed_return_data = self.prepare_optimization_inputs(data, weight_bounds, w)
+        constraint = find_constraint(weight_bounds, constraint_type=2)
+        w = self.weights
+        
+        # Optimization objective and results
+        # Appending dual variable value as 1 to parameter array
+        param_array = np.append(w, 1)
+        def f(x):
+            w,s = x[:-1], x[-1]
+            X = trimmed_return_data.T @ w
+            mean = self.mean @ w
+            return self.risk_aversion * ((1/s) * (np.log(np.mean(np.exp(-s * X))) - np.log(1 - self.alpha))) + self.strength * self.reg(w) - mean
+        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(1e-8,None)], constraints= [{'type':'eq','fun': constraint}])
+        if result.success:
+            self.weights = result.x[:-1]
+            return self.weights
+        else:
+            raise OptimizationError("Mean EVaR optimization failed")
