@@ -1,4 +1,5 @@
 import time
+import warnings
 
 import numpy as np
 import scipy.stats as scistats
@@ -20,11 +21,20 @@ def find_regularizer(reg):
     else:
         raise PortfolioError(f"Unknown regulizer: {reg}")
 
-def test_integrity(tickers, weights=None, cov=None, mean=None, bounds=None, kelly_fraction=None, confidence=None):
+def test_integrity(
+        tickers, 
+        weights=None, 
+        cov=None, 
+        mean=None, 
+        bounds=None, 
+        kelly_fraction=None, 
+        confidence=None, 
+        volatility_array=None
+    ):
     asset_quantity = len(tickers)
     if mean is not None:
         if len(mean) != asset_quantity:
-            raise DataError(f"Mean vector shape mismatch. Expected {asset_quantity}, Got {mean.shape}")
+            raise DataError(f"Mean vector shape mismatch. Expected {asset_quantity}, Got {len(mean)}")
     if cov is not None:
         if asset_quantity != cov.shape[0] or (cov.shape[0] != cov.shape[1]):
             raise DataError(f"Covariance matrix shape mismatch. Expected ({asset_quantity}, {asset_quantity}), Got {cov.shape}")
@@ -34,7 +44,7 @@ def test_integrity(tickers, weights=None, cov=None, mean=None, bounds=None, kell
             raise DataError(f"Singular covariance matrix")
     if weights is not None:
         if len(weights) != asset_quantity:
-            raise DataError(f"Weight vector shape mismatch. Expected {asset_quantity}, Got {weights.shape}")
+            raise DataError(f"Weight vector shape mismatch. Expected {asset_quantity}, Got {len(weights)}")
     if bounds is not None:
         bounds = tuple(bounds)
         if len(bounds) != 2:
@@ -47,6 +57,11 @@ def test_integrity(tickers, weights=None, cov=None, mean=None, bounds=None, kell
     if confidence is not None:
         if confidence <=0 or confidence >= 1:
             raise DataError(f"Invalid confidence value. Must be bounded within (0,1), Got {confidence}")
+    if volatility_array is not None:
+        if len(volatility_array) != asset_quantity:
+            raise DataError(f"Volatility array length mismatch. Expected {len(tickers)}, Got {len(volatility_array)}")
+        if (volatility_array <= 0).any():
+            raise DataError(f"Invalid volatility values: volatility array must contain strictly positive values.")
 
 def extract_trim(data):
     if data is None:

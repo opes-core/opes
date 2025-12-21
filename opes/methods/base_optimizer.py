@@ -43,7 +43,7 @@ class Optimizer(ABC):
             max_weight = np.max(np.abs(self.weights))
             statistics = {
                 "Tickers": self.tickers, 
-                "Weights": np.round(self.weights, 2), 
+                "Weights": np.round(self.weights, 5), 
                 "Portfolio Entropy": portfolio_entropy, 
                 "Herfindahl Index": herfindahl_index,
                 "Absolute Max Weight" : max_weight
