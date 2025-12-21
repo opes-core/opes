@@ -1,9 +1,5 @@
-import time
-import warnings
-
 import numpy as np
 import scipy.stats as scistats
-import matplotlib.pyplot as plt
 import pandas as pd
 
 from opes.errors import DataError, PortfolioError
@@ -25,7 +21,7 @@ def test_integrity(
         tickers, 
         weights=None, 
         cov=None, 
-        mean=None, 
+        mean=None,
         bounds=None, 
         kelly_fraction=None, 
         confidence=None, 
@@ -82,86 +78,54 @@ def find_constraint(bounds, constraint_type=1):
     return lambda x: x[slicer].sum() + shift
 
 # Slippage function
-def slippage(weights, previous_returns, cost):
-    realized_weights = weights * (1 + previous_returns)
-    realized_weights /= realized_weights.sum()
-    turnover = np.sum(np.abs(weights - realized_weights))
-    return cost * turnover
+def slippage(weights, returns, cost):
+    """
+    Compute elementwise portfolio slippage given weights, returns, and cost model.
 
-# Performance metrics analyzer
-def metrics(returns, T):
-    returns = np.array(returns)
-    average = returns.mean()
-    downside_vol = returns[returns < 0].std()
-    vol = returns.std()
+    Parameters
+    ----------
+    weights : np.ndarray, shape (T, N)
+    returns : np.ndarray, shape (T, N)
+    cost : dict
+        Must have exactly one key. Supported models:
+        - 'const': scalar
+        - 'gamma': [shape, scale]
+        - 'lognormal': [mean, sigma]
+        - 'inversegaussian': [mean, scale]
+        - 'jump': [lambda, mu, sigma] (compound Poisson)
 
-    # Performance metrics
-    SHARPE = np.sqrt(252) * average / vol if (vol > 0 or not np.isnan(vol)) else np.nan
-    SORTINO = np.sqrt(252) * average / downside_vol if (downside_vol > 0 or not np.isnan(downside_vol)) else np.nan
-    VOLATILITY = vol * np.sqrt(252) if (vol > 0 or not np.isnan(vol)) else np.nan
-    AVERAGE = average
-    TOTAL = np.prod(1 + returns) - 1
-    CAGR = (1 + TOTAL) ** (252/T) - 1
-    MAX_DD = np.max(1 - np.cumprod(1 + returns) / np.maximum.accumulate(np.cumprod(1 + returns)))
-    CALMAR = CAGR / abs(MAX_DD) if MAX_DD > 0 else np.nan
-    VAR = -np.quantile(returns, 0.05)
-    tail_returns = returns[returns <= -VAR]
-    CVAR = -tail_returns.mean() if len(tail_returns) > 0 else np.nan
-    SKEW = scistats.skew(returns)
-    KURTOSIS = scistats.kurtosis(returns)
-    
-    # Zipping Text and values
-    performance_metrics = [
-        'Sharpe Ratio',
-        'Sortino Ratio',
-        'Calmar Ratio',
-        'Volatility (%)',
-        'Mean Return (%)',
-        'Total Return (%)',
-        'CAGR (%)',
-        'Max Drawdown (%)',
-        'VaR-95 (%)',
-        'CVaR-95 (%)',
-        'Skew',
-        'Kurtosis'
-    ]
-    values = [VOLATILITY, AVERAGE, TOTAL, CAGR, MAX_DD, VAR, CVAR]
-    results = [round(SHARPE, 2), round(SORTINO, 2), round(CALMAR, 2)] + [round(x*100, 2) for x in values] + [round(SKEW, 2), round(KURTOSIS, 2)]
-
-    return dict(zip(performance_metrics, results))
-
-# Plotting function
-def plotter(portfolio, benchmark, dates, show, save):
-    
-    # Converting returns to wealth processes
-    portfolio = np.cumprod(1 + np.array(portfolio))
-    benchmark = np.cumprod(1 + np.array(benchmark))
-
-    # Colors
-    portfolio_color = "#2E7D32"    
-    benchmark_color = "#1976D2"    
-    green_fill = "#4CAF50"         
-    red_fill = "#EF5350"           
-    breakeven_color = "#000000"    
-
-    # Plotting
-    plt.plot(dates, portfolio, color=portfolio_color, label="Portfolio", linestyle='-')
-    plt.plot(dates, benchmark, color=benchmark_color, label="Benchmark", linestyle='--')
-    plt.axhline(y=1, color=breakeven_color, linestyle=':', label="Breakeven")
-    plt.title("Wealth Performance")
-    plt.xlabel("Time")
-    plt.ylabel("Wealth")
-    plt.grid(True)
-    plt.legend()
-
-    # Fill
-    plt.fill_between(dates, 1, portfolio, where=(portfolio >= 1), color=green_fill, alpha=0.1)
-    plt.fill_between(dates, 1, benchmark, where=(benchmark >= 1), color=green_fill, alpha=0.1)
-    plt.fill_between(dates, 1, portfolio, where=(portfolio <= 1), color=red_fill, alpha=0.2)
-    plt.fill_between(dates, 1, benchmark, where=(benchmark <= 1), color=red_fill, alpha=0.2)
-
-    # Saving and showing if necessary
-    if save:
-        plt.savefig(f"plot_{int(time.time()*1000)}.png", dpi=300, bbox_inches='tight')
-    if show:
-        plt.show()
+    Returns
+    -------
+    slippage_array : np.ndarray, shape (T,)
+    """
+    slippage_array = np.zeros(len(weights))
+    # Loop range is from 1 to horizon. Rebalancing happens from t=1
+    for i in range(1, len(weights)):
+        w_current = weights[i]
+        w_prev = weights[i-1]
+        w_realized = w_prev * (1 + returns[i])
+        w_realized /= w_realized.sum()
+        turnover = np.sum(np.abs(w_current - w_realized))
+        slippage_array[i] = turnover
+    # Deciding slippage model using cost key
+    cost_key = next(iter(cost))
+    cost_params = cost[cost_key]
+    # Constant slippage
+    if cost_key == 'const':
+        return slippage_array * cost_params / 10000
+    horizon = len(slippage_array)
+    # Gamma distributed slippage
+    if cost_key == 'gamma':
+        return slippage_array * np.random.gamma(shape=cost_params[0], scale=cost_params[1], size=horizon) / 10000
+    # Lognormally distributed slippage
+    elif cost_key == 'lognormal':
+        return slippage_array * np.random.lognormal(mean=cost_params[0], sigma=cost_params[1], size=horizon) / 10000
+    # Inverse gaussian slippage
+    elif cost_key == 'inversegaussian':
+        return slippage_array * np.random.wald(mean=cost_params[0], scale=cost_params[1], size=horizon) / 10000
+    # Compound poisson slippage (jump process)
+    elif cost_key == 'jump':
+        N = np.random.poisson(cost_params[0], size=horizon)
+        jump_cost = np.array([np.sum(np.random.lognormal(mean=cost_params[1], sigma=cost_params[2], size=n)) if n > 0 else 0 for n in N])
+        return slippage_array * jump_cost / 10000
+    raise DataError(f"Unknown cost model: {cost_key}")
