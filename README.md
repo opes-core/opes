@@ -8,16 +8,39 @@ OPES provides a plethora of quantitative portfolio optimizers with a comprehensi
 
 ## Key Features
 
-- **20+ optimizers**: Mean-Variance, Max Sharpe, Kelly Criterion, Risk Parity, CVaR, Online Learning models and more
+- **15+ optimizers (and more to come)**: Mean-Variance, Max Sharpe, Kelly Criterion, Risk Parity, CVaR, Online Learning models and more
 - **Advanced backtesting**: Historical performance analysis with wealth plots and comprehensive metrics
 - **Stochastic slippage models**: Gamma, Lognormal, Poisson Jump, Inverse Gaussian, or constant costs
 - **Flexible regularization**: Entropy, L2, and MaxWeight regularizers
 - **Rich metrics**: Sharpe, Sortino, Calmar, Max Drawdown, CVaR, VaR, CAGR, Skewness, Kurtosis and more
 
-## Optimizers
+## Portfolio Methods
 
-**Utility-Based**: Quadratic Utility, CRRA, CARA, HARA  
-**Markowitz**: Mean-Variance, Max Sharpe, GMV, Max Mean
-**Heurstic-Based**: Risk Parity, Inverse Volatility Portfolio, 1/N, Max Diversification
-**Risk Measures**: CVaR, EVaR, Mean-CVaR, Mean-EVaR
-**Online Learning**: Exponential Gradient, BCRP (with regularization)
+### Utility Theory
+- Quadratic Utility
+- CRRA
+- CARA
+- HARA
+
+### Markowitz Paradigm
+- Maximum Mean
+- Minimum Variance
+- Mean Variance
+- Maximum Sharpe
+
+### Principled Heuristics
+- Risk Parity
+- Inverse Volatility
+- Softmax Mean
+- Maximum Diversification
+- 1/N
+
+### Risk Measures
+- CVaR
+- Mean-CVaR
+- EVaR
+- Mean-EvaR
+
+### Online Learning
+- BCRP with regularization (FTL/FTRL)
+- Exponential Gradient
