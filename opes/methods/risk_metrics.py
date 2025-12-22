@@ -67,7 +67,7 @@ class CVaR(Optimizer):
         param_array = np.append(w, 1)
         def f(x):
             w, v = x[:-1], x[-1]
-            X = -trimmed_return_data.T @ w
+            X = -trimmed_return_data @ w
             excess = np.mean(np.maximum(X - v, 0.0))
             return (v + excess / (1 - self.alpha) + self.strength * self.reg(w))
         result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(None,None)], constraints= [{'type':'eq','fun': constraint}])
@@ -142,7 +142,7 @@ class MeanCVaR(Optimizer):
         param_array = np.append(w, 1)
         def f(x):
             w, v = x[:-1], x[-1]
-            X = -trimmed_return_data.T @ w
+            X = -trimmed_return_data @ w
             excess = np.mean(np.maximum(X - v, 0.0))
             mean  = self.mean @ w
             return (self.risk_aversion * (v + excess / (1 - self.alpha)) + self.strength * self.reg(w) - mean)
@@ -213,7 +213,7 @@ class EVaR(Optimizer):
         param_array = np.append(w, 1)
         def f(x):
             w,s = x[:-1], x[-1]
-            X = trimmed_return_data.T @ w
+            X = trimmed_return_data @ w
             return (1/s) * (np.log(np.mean(np.exp(-s * X))) - np.log(1 - self.alpha)) + self.strength * self.reg(w)
         result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(1e-8,None)], constraints= [{'type':'eq','fun': constraint}])
         if result.success:
@@ -287,7 +287,7 @@ class MeanEVaR(Optimizer):
         param_array = np.append(w, 1)
         def f(x):
             w,s = x[:-1], x[-1]
-            X = trimmed_return_data.T @ w
+            X = trimmed_return_data @ w
             mean = self.mean @ w
             return self.risk_aversion * ((1/s) * (np.log(np.mean(np.exp(-s * X))) - np.log(1 - self.alpha))) + self.strength * self.reg(w) - mean
         result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(1e-8,None)], constraints= [{'type':'eq','fun': constraint}])

@@ -75,7 +75,7 @@ class InverseVolatility(Optimizer):
         self.tickers, data = extract_trim(data)
 
         # Extracting volatility array and testing integrity
-        self.volarray = np.std(data, axis=1, ddof=1)
+        self.volarray = np.std(data, axis=0, ddof=1)
         test_integrity(tickers=self.tickers, volatility_array=self.volarray)
     
     def optimize(self, data=None):
@@ -121,7 +121,7 @@ class SoftmaxMean(Optimizer):
         self.tickers, data = extract_trim(data)
 
         # Extracting mean and testing integrity
-        self.mean = np.mean(data, axis=1)
+        self.mean = np.mean(data, axis=0)
         test_integrity(tickers=self.tickers, mean=self.mean)
     
     def optimize(self, data=None):
@@ -174,7 +174,7 @@ class MaxDiversification(Optimizer):
         self.tickers, data = extract_trim(data)
     
         # Checking for covariance, per-asset volatility and weights
-        self.covariance = np.cov(data)
+        self.covariance = np.cov(data, rowvar=False)
         self.volarray = np.sqrt(np.diag(self.covariance))   
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
 
@@ -242,7 +242,7 @@ class RiskParity(Optimizer):
         self.tickers, data = extract_trim(data)
     
         # Checking for covariance and weights
-        self.covariance = np.cov(data)
+        self.covariance = np.cov(data, rowvar=False)
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
 
         # Functions to test data integrity

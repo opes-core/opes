@@ -40,7 +40,7 @@ class MaxMean(Optimizer):
         self.tickers, data = extract_trim(data)
         
         # Checking for mean and weights and assigning optimization data accordingly
-        self.mean = np.mean(data, axis=1)
+        self.mean = np.mean(data, axis=0)
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
 
         # Functions to test data integrity and find optimization constraint
@@ -105,7 +105,7 @@ class MinVariance(Optimizer):
         self.tickers, data = extract_trim(data)
     
         # Checking for covariance and weights and assigning optimization data accordingly
-        self.covariance = np.cov(data)
+        self.covariance = np.cov(data, rowvar=False)
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
 
         # Functions to test data integrity and find optimization constraint
@@ -174,8 +174,8 @@ class MeanVariance(Optimizer):
         self.tickers, data = extract_trim(data)
     
         # Checking for mean, covaraince and weights and assigning optimization data accordingly
-        self.mean = np.mean(data, axis=1)
-        self.covariance = np.cov(data)
+        self.mean = np.mean(data, axis=0)
+        self.covariance = np.cov(data, rowvar=False)
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
 
         # Functions to test data integrity and find optimization constraint
@@ -243,8 +243,8 @@ class MaxSharpe(Optimizer):
         self.tickers, data = extract_trim(data)
     
         # Checking for mean, covariance and weights and assigning optimization data accordingly
-        self.mean = np.mean(data, axis=1)
-        self.covariance = np.cov(data)
+        self.mean = np.mean(data, axis=0)
+        self.covariance = np.cov(data, rowvar=False)
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
 
         # Functions to test data integrity and find optimization constraint

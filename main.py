@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from opes.methods.utility_theory import CRRA
+from opes.methods.online import ExponentialGradient
 from opes.backtester import Backtester
 
 # Plot wealth function
@@ -14,7 +15,7 @@ def plot_wealth(returns_dict, initial_wealth=1.0):
     for name, returns in returns_dict.items():
         wealth = initial_wealth * np.cumprod(1 + returns)
         plt.plot(wealth, label=name, linewidth=2)
-    plt.xlabel("Time Period", fontsize=12)
+    plt.xlabel("Time (Days)", fontsize=12)
     plt.ylabel("Wealth", fontsize=12)
     plt.title("Portfolio Wealth Over Time", fontsize=14, fontweight='bold')
     plt.legend(fontsize=10)
@@ -23,35 +24,38 @@ def plot_wealth(returns_dict, initial_wealth=1.0):
     plt.show()
 
 # Obtaining data
-TICKERS = ["GME", "NVDA", "SHV", "PFE", "KO"]
+TICKERS = ["AAPL", "NVDA", "SHV", "PFE", "TSLA"]
 train = yf.download(tickers=TICKERS, start="2010-01-01", end="2015-01-01", group_by="ticker", auto_adjust=False)
 time.sleep(2) # De-throttling
 test = yf.download(tickers=TICKERS, start="2015-01-02", end="2020-01-01", group_by="ticker", auto_adjust=False)
 
 # Ensuring tickers are in same order, yfinance sneaks different orders sometimes
 train_tickers = train.columns.get_level_values(0).unique()
-print(train_tickers)
 test  = test.loc[:, train_tickers]
 
-# Declaring CRRA optimizer
-crra_2 = CRRA(risk_aversion=2)
+# CRRA vs Exponential Gradient
+crra_15 = CRRA(risk_aversion=15)
+expgrad = ExponentialGradient(learning_rate=0.25)
 
-# Stochastic backtest with 3 scenarios
-tester = Backtester(train_data=train, test_data=test, cost={'jump': (7, 2.6, 0.3)})
-scenario_1 = tester.backtest(optimizer=crra_2, rebalance_freq=21)
-scenario_2 = tester.backtest(optimizer=crra_2, rebalance_freq=21)
-scenario_3 = tester.backtest(optimizer=crra_2, rebalance_freq=21)
+# Stochastic backtest (Poisson Compound)
+tester = Backtester(train_data=train, test_data=test, cost={'jump': (7, 2.3, 0.3)})
+scenario_1 = tester.backtest(optimizer=crra_15, rebalance_freq=1)
+scenario_2 = tester.backtest(optimizer=expgrad, rebalance_freq=1)
 
 # Plotting wealth
 plot_wealth(
     {
-        "CRRA (1)": scenario_1,
-        "CRRA (2)": scenario_2,
-        "CRRA (3)": scenario_3
+        "CRRA": scenario_1,
+        "EG": scenario_2,
     }
 )
 
 # Portfolio performance metrics demo
+print("CRRA PERFORMANCE")
+metrics = tester.get_metrics(scenario_1)
+for key in metrics:
+    print(f"{key}: {metrics[key]}")
+print("\nEXPONENTIAL GRADIENT PERFORMANCE")
 metrics = tester.get_metrics(scenario_2)
 for key in metrics:
     print(f"{key}: {metrics[key]}")

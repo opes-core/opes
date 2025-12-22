@@ -58,14 +58,16 @@ def test_integrity(
         if (volatility_array <= 0).any():
             raise DataError(f"Invalid volatility values: volatility array must contain strictly positive values.")
 
+# Extract and trim for optimizers. Returns data and tickers
 def extract_trim(data):
     if data is None:
         raise DataError("Data not specified")
     returnMatrix = data.xs('Close', axis=1, level=1).pct_change(fill_method=None).dropna().values.tolist()
     min_len = min(len(r) for r in returnMatrix)
     tickers = data.columns.get_level_values(0).unique().tolist()
-    return tickers, np.array([r[-min_len:] for r in returnMatrix]).T
+    return tickers, np.array([r[-min_len:] for r in returnMatrix])
 
+# Extract trimmed data for backtesting engine. Returns trimmed data
 def extract_data(data):
     if data is None:
         raise DataError("Data not specified")
