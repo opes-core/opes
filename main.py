@@ -2,7 +2,8 @@ import time
 import yfinance as yf
 import numpy as np
 import matplotlib.pyplot as plt
-from opes.methods.risk_metrics import MeanCVaR
+
+from opes.methods.utility_theory import CRRA
 from opes.backtester import Backtester
 
 # Plot wealth function
@@ -22,34 +23,35 @@ def plot_wealth(returns_dict, initial_wealth=1.0):
     plt.show()
 
 # Obtaining data
-TICKERS = ["GME", "NVDA", "AAPL", "BRK-B", "SHV"]
+TICKERS = ["GME", "NVDA", "SHV", "PFE", "KO"]
 train = yf.download(tickers=TICKERS, start="2010-01-01", end="2015-01-01", group_by="ticker", auto_adjust=False)
 time.sleep(2) # De-throttling
-test = yf.download(tickers=TICKERS, start="2015-01-02", end="2025-01-01", group_by="ticker", auto_adjust=False)
+test = yf.download(tickers=TICKERS, start="2015-01-02", end="2020-01-01", group_by="ticker", auto_adjust=False)
 
 # Ensuring tickers are in same order, yfinance sneaks different orders sometimes
 train_tickers = train.columns.get_level_values(0).unique()
+print(train_tickers)
 test  = test.loc[:, train_tickers]
 
-# Declaring mean-cvar optimizers for various confidence levels
-cvar_75 = MeanCVaR(confidence=0.75, risk_aversion=0.5)
-cvar_85 = MeanCVaR(confidence=0.85, risk_aversion=0.5)
-cvar_95 = MeanCVaR(confidence=0.95, risk_aversion=0.5)
-cvar_99 = MeanCVaR(confidence=0.99, risk_aversion=0.5)
+# Declaring CRRA optimizer
+crra_2 = CRRA(risk_aversion=2)
 
-# Backtesting strategies
-tester = Backtester(train_data=train, test_data=test)
-returns75 = tester.backtest(optimizer=cvar_75)
-returns85 = tester.backtest(optimizer=cvar_85)
-returns95 = tester.backtest(optimizer=cvar_95)
-returns99 = tester.backtest(optimizer=cvar_99)
+# Stochastic backtest with 3 scenarios
+tester = Backtester(train_data=train, test_data=test, cost={'jump': (7, 2.6, 0.3)})
+scenario_1 = tester.backtest(optimizer=crra_2, rebalance_freq=21)
+scenario_2 = tester.backtest(optimizer=crra_2, rebalance_freq=21)
+scenario_3 = tester.backtest(optimizer=crra_2, rebalance_freq=21)
 
 # Plotting wealth
 plot_wealth(
     {
-        "CVaR 75": returns75,
-        "CVaR 85": returns85,
-        "CVaR 95": returns95,
-        "CVaR 99": returns99
+        "CRRA (1)": scenario_1,
+        "CRRA (2)": scenario_2,
+        "CRRA (3)": scenario_3
     }
 )
+
+# Portfolio performance metrics demo
+metrics = tester.get_metrics(scenario_2)
+for key in metrics:
+    print(f"{key}: {metrics[key]}")

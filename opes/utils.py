@@ -67,6 +67,13 @@ def extract_trim(data):
     tickers = data.columns.get_level_values(0).unique().tolist()
     return tickers, np.array([r[-min_len:] for r in returnMatrix]).T
 
+def extract_data(data):
+    if data is None:
+        raise DataError("Data not specified")
+    returnMatrix = data.xs('Close', axis=1, level=1).pct_change(fill_method=None).dropna().values.tolist()
+    min_len = min(len(r) for r in returnMatrix)
+    return np.array([r[-min_len:] for r in returnMatrix])
+
 def find_constraint(bounds, constraint_type=1):
     if bounds[0] < 0 and bounds[1] > 0:
         shift = 0
@@ -78,7 +85,7 @@ def find_constraint(bounds, constraint_type=1):
     return lambda x: x[slicer].sum() + shift
 
 # Slippage function
-def slippage(weights, returns, cost):
+def slippage(weights, returns, cost, numpy_seed=None):
     """
     Compute elementwise portfolio slippage given weights, returns, and cost model.
 
@@ -93,11 +100,13 @@ def slippage(weights, returns, cost):
         - 'lognormal': [mean, sigma]
         - 'inversegaussian': [mean, scale]
         - 'jump': [lambda, mu, sigma] (compound Poisson)
+    numpy_seed: int, numpy rng seed
 
     Returns
     -------
     slippage_array : np.ndarray, shape (T,)
     """
+    numpy_rng = np.random.default_rng(numpy_seed)
     slippage_array = np.zeros(len(weights))
     # Loop range is from 1 to horizon. Rebalancing happens from t=1
     for i in range(1, len(weights)):
@@ -108,7 +117,7 @@ def slippage(weights, returns, cost):
         turnover = np.sum(np.abs(w_current - w_realized))
         slippage_array[i] = turnover
     # Deciding slippage model using cost key
-    cost_key = next(iter(cost))
+    cost_key = next(iter(cost)).lower()
     cost_params = cost[cost_key]
     # Constant slippage
     if cost_key == 'const':
@@ -116,16 +125,16 @@ def slippage(weights, returns, cost):
     horizon = len(slippage_array)
     # Gamma distributed slippage
     if cost_key == 'gamma':
-        return slippage_array * np.random.gamma(shape=cost_params[0], scale=cost_params[1], size=horizon) / 10000
+        return slippage_array * numpy_rng.gamma(shape=cost_params[0], scale=cost_params[1], size=horizon) / 10000
     # Lognormally distributed slippage
     elif cost_key == 'lognormal':
-        return slippage_array * np.random.lognormal(mean=cost_params[0], sigma=cost_params[1], size=horizon) / 10000
+        return slippage_array * numpy_rng.lognormal(mean=cost_params[0], sigma=cost_params[1], size=horizon) / 10000
     # Inverse gaussian slippage
     elif cost_key == 'inversegaussian':
-        return slippage_array * np.random.wald(mean=cost_params[0], scale=cost_params[1], size=horizon) / 10000
+        return slippage_array * numpy_rng.wald(mean=cost_params[0], scale=cost_params[1], size=horizon) / 10000
     # Compound poisson slippage (jump process)
     elif cost_key == 'jump':
-        N = np.random.poisson(cost_params[0], size=horizon)
-        jump_cost = np.array([np.sum(np.random.lognormal(mean=cost_params[1], sigma=cost_params[2], size=n)) if n > 0 else 0 for n in N])
+        N = numpy_rng.poisson(cost_params[0], size=horizon)
+        jump_cost = np.array([np.sum(numpy_rng.lognormal(mean=cost_params[1], sigma=cost_params[2], size=n)) if n > 0 else 0 for n in N])
         return slippage_array * jump_cost / 10000
     raise DataError(f"Unknown cost model: {cost_key}")

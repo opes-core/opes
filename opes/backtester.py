@@ -3,7 +3,7 @@ import pandas as pd
 import scipy.stats as scistats
 
 from opes.errors import PortfolioError
-from opes.utils import slippage, extract_trim
+from opes.utils import slippage, extract_data
 
 class Backtester():
     
@@ -12,37 +12,54 @@ class Backtester():
         self.test = test_data
         self.cost = cost
     
-    def backtest(self, optimizer, rebalance_freq=None):
-
-        # Construct integrity checker function here
+    def backtest_integrity_check(self, optimizer, rebalance_freq, seed):
+        # Checking optimizer class
         try:
             optimizer.identity
         except:
             raise PortfolioError(f"Portfolio object not given. Got {type(optimizer)}")
+        # Checking rebalance frequency type and validity
+        if rebalance_freq <= 0 or not isinstance(rebalance_freq, int):
+            raise PortfolioError(f"Invalid rebalance frequency. Expected integer within bounds [1,T], Got {rebalance_freq}")
+        # Validiating numpy seed
+        if seed is not None and not isinstance(seed, int):
+            raise PortfolioError(f"Invalid seed. Expected integer or None, Got {seed}")
+        # Training data validity
+        if len(self.train) <= 5:
+            raise PortfolioError(f"Training data insufficient. {len(self.train)} timesteps too short")
+        # Cost model validity
+        if len(self.cost) != 1:
+            raise PortfolioError(f"Invalid cost model. Cost model must be a dictionary of length 1, Got {len(self.cost)}")
+        first_key = next(iter(self.cost))
+        if first_key.lower() not in ['const', 'lognormal', 'gamma', 'inversegaussian', 'jump']:
+            raise PortfolioError(f"Unknown cost model: {first_key}")
 
-        if rebalance_freq == 0:
-            raise PortfolioError(f"Invalid rebalance frequency. Expected within bounds [1,T], Got {rebalance_freq}")
+    def backtest(self, optimizer, rebalance_freq=None, seed=None):
         
-        test_data = extract_trim(self.test)[1].T
+        # Running backtester integrity checks
+        self.backtest_integrity_check(optimizer, rebalance_freq, seed)
+        # Backtest loop
+        test_data = extract_data(self.test)
         # Static weight backtest
         if rebalance_freq is None:
             weights = optimizer.optimize(self.train)
             weights_array = np.tile(weights, (len(test_data), 1))
-        # Rolling weight backtest (MUST BE RESOLVED)
+        # Rolling weight backtest
         if rebalance_freq is not None:
-            weights = np.zeros(len(test_data)).tolist()
+            weights = [None] * len(test_data)
             temp_weights = optimizer.optimize(self.train)
-            for i in range(1, len(self.test) + 1):
+            weights[0] = temp_weights
+            for i in range(1, len(test_data)):
                 if i % rebalance_freq == 0:
-                    weights[i] = optimizer.optimize(pd.concat([self.train, self.test.iloc[0:i]]).dropna(), w=temp_weights)
-                    temp_weights = weights[i]
+                    # CONFIRM LOOKAHEAD BIAS
+                    temp_weights = optimizer.optimize(pd.concat([self.train, self.test.iloc[0:i-1]]).dropna(), w=temp_weights)
                 weights[i] = temp_weights
-            weights_array = np.array(weights)
+            weights_array = np.vstack(weights)
         portfolio_returns = np.einsum('ij,ij->i', weights_array, test_data)
-        portfolio_returns -= slippage(weights=weights_array, returns=portfolio_returns, cost=self.cost)
+        portfolio_returns -= slippage(weights=weights_array, returns=portfolio_returns, cost=self.cost, numpy_seed=seed)
         return portfolio_returns
 
-    def get_metrics(returns):
+    def get_metrics(self, returns):
         returns = np.array(returns)
         average = returns.mean()
         downside_vol = returns[returns < 0].std()
