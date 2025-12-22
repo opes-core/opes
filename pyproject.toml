@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opes"
+version = "1.0.0"
+description = "Open-source Python module for portfolio management with a plethora of portfolio schemes, stochastic backtesting and metrics"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Nitin Tony Paul", email = "nitintonypaul@gmail.com"}]
+dependencies = [
+    "numpy>=2.2.6,<3.0",
+    "pandas>=2.3.3,<3.0",
+    "scipy>=1.15.2,<2.0"
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Office/Business :: Financial :: Investment"
+]
+
+[project.urls]
+Repository = "https://github.com/opes-core/opes"
