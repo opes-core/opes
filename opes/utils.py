@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.stats as scistats
 import pandas as pd
 
 from opes.errors import DataError, PortfolioError
