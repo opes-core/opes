@@ -51,3 +51,7 @@ OPES provides a plethora of quantitative portfolio optimizers with a comprehensi
 ```python
 pip install opes
 ```
+
+## Disclaimer
+
+The information provided by OPES is for educational, research and informational purposes only. It is not intended as financial, investment or legal advice. Users should conduct their own due diligence and consult with licensed financial professionals before making any investment decisions. OPES and its contributors are not liable for any financial losses or decisions made based on this content. Past performance is not indicative of future results.
