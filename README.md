@@ -18,9 +18,10 @@ OPES provides a plethora of quantitative portfolio optimizers with a comprehensi
 
 ### Utility Theory
 - Quadratic Utility
-- CRRA
-- CARA
-- HARA
+- Constant Relative Risk Aversion
+- Constant Absolute Risk Aversion
+- Hyperbolic Absolute Risk Aversion
+- Kelly Criterion and fractions
 
 ### Markowitz Paradigm
 - Maximum Mean
