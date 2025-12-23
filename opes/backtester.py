@@ -3,6 +3,7 @@ from numbers import Real
 import numpy as np
 import pandas as pd
 import scipy.stats as scistats
+import matplotlib.pyplot as plt
 
 from opes.errors import PortfolioError
 from opes.utils import slippage, extract_data
@@ -112,3 +113,19 @@ class Backtester():
         values = [VOLATILITY, AVERAGE, TOTAL, CAGR, MAX_DD, VAR, CVAR]
         results = [round(SHARPE, 5), round(SORTINO, 5), round(CALMAR, 5)] + [round(x*100, 5) for x in values] + [round(SKEW, 5), round(KURTOSIS, 5), round(OMEGA, 5)]
         return dict(zip(performance_metrics, results))
+    
+    def plot(self, returns_dict, initial_wealth=1.0):
+        if isinstance(returns_dict, np.ndarray):
+            returns_dict = {"Strategy": returns_dict}
+        plt.figure(figsize=(12, 6))
+        for name, returns in returns_dict.items():
+            wealth = initial_wealth * np.cumprod(1 + returns)
+            plt.plot(wealth, label=name, linewidth=2)
+        plt.axhline(y=1, color='black', linestyle=':', label="Breakeven")
+        plt.xlabel("Time", fontsize=12)
+        plt.ylabel("Wealth", fontsize=12)
+        plt.title("Portfolio Wealth Over Time", fontsize=14, fontweight='bold')
+        plt.legend(fontsize=10)
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.show()

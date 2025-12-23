@@ -4,7 +4,7 @@ from scipy.optimize import minimize
 
 from opes.methods.base_optimizer import Optimizer
 from ..utils import extract_trim, find_regularizer, test_integrity, find_constraint
-from ..errors import OptimizationError
+from ..errors import OptimizationError, PortfolioError
 
 class MaxMean(Optimizer):
     """
@@ -71,6 +71,19 @@ class MaxMean(Optimizer):
         else:
             raise OptimizationError("Maximum mean optimization failed")
 
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength
+
 class MinVariance(Optimizer):
     """
     Optimizer for the Global Minimum Variance (GMV) portfolio.
@@ -135,6 +148,19 @@ class MinVariance(Optimizer):
             return self.weights
         else:
             raise OptimizationError("Global minimum optimization failed")
+
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength
 
 class MeanVariance(Optimizer):
     """
@@ -205,6 +231,19 @@ class MeanVariance(Optimizer):
         else:
             raise OptimizationError("Mean variance optimization failed")
 
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength
+
 class MaxSharpe(Optimizer):
     """
     Optimizer to maximize the portfolio Sharpe Ratio.
@@ -273,3 +312,16 @@ class MaxSharpe(Optimizer):
             return self.weights
         else:
             raise OptimizationError("Maximum sharpe optimization failed")
+
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength

@@ -77,6 +77,19 @@ class CVaR(Optimizer):
         else:
             raise OptimizationError("CVaR optimization failed")
 
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength
+
 class MeanCVaR(Optimizer):
     """
     Optimizer for Mean-CVaR portfolio efficiency.
@@ -153,6 +166,19 @@ class MeanCVaR(Optimizer):
         else:
             raise OptimizationError("Mean CVaR optimization failed")
 
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength
+
 class EVaR(Optimizer):
     """
     Optimizer for minimizing Entropic Value at Risk (EVaR).
@@ -221,6 +247,19 @@ class EVaR(Optimizer):
             return self.weights
         else:
             raise OptimizationError("EVaR optimization failed")
+
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength
 
 class MeanEVaR(Optimizer):
     """
@@ -297,6 +336,19 @@ class MeanEVaR(Optimizer):
         else:
             raise OptimizationError("Mean EVaR optimization failed")
 
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength
+
 class EntropicRisk(Optimizer):
     """
     Optimizer for minimizing the Entropic Risk Measure (ERM).
@@ -369,3 +421,16 @@ class EntropicRisk(Optimizer):
             return self.weights
         else:
             raise OptimizationError("Entropic risk metric optimization failed")
+
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength

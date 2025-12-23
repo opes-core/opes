@@ -71,6 +71,19 @@ class Kelly(Optimizer):
             return self.weights
         else:
             raise OptimizationError("Kelly criterion optimization failed")
+    
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength
 
 class QuadraticUtility(Optimizer):
     """
@@ -136,6 +149,19 @@ class QuadraticUtility(Optimizer):
             return self.weights
         else:
             raise OptimizationError("Quadratic utility optimization failed")
+    
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength
 
 class CARA(Optimizer):
     """
@@ -201,6 +227,19 @@ class CARA(Optimizer):
             return self.weights
         else:
             raise OptimizationError("CARA optimization failed")
+
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength
 
 class CRRA(Optimizer):
     """
@@ -270,6 +309,19 @@ class CRRA(Optimizer):
             return self.weights
         else:
             raise OptimizationError("CRRA optimization failed")
+
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength
 
 class HARA(Optimizer):
     """
@@ -345,3 +397,16 @@ class HARA(Optimizer):
             return self.weights
         else:
             raise OptimizationError("HARA optimization failed")
+
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength

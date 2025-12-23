@@ -208,6 +208,19 @@ class MaxDiversification(Optimizer):
         else:
             raise OptimizationError(f"Maximum diversification optimization failed: {result.message}")
 
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength
+
 class RiskParity(Optimizer):
     """
     Equal Risk Contribution (Risk Parity) optimizer.
@@ -275,6 +288,19 @@ class RiskParity(Optimizer):
             return self.weights
         else:
             raise OptimizationError(f"Risk parity optimization failed: {result.message}")
+
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength
 
 class REPO(Optimizer):
     """
@@ -353,7 +379,20 @@ class REPO(Optimizer):
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError("REPO optimization failed")
+            raise OptimizationError(f"REPO optimization failed: {result.message}")
+
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength
 
 class DEPO(Optimizer):
     """
@@ -431,4 +470,17 @@ class DEPO(Optimizer):
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError("DEPO optimization failed")
+            raise OptimizationError(f"DEPO optimization failed: {result.message}")
+
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
+        :param strength: Scalar multiplier for the regularization penalty.
+        :raises PortfolioError: If no regularizer is provided.
+        """
+        if reg is None:
+            raise PortfolioError("Regularizer not specified")
+        self.reg = find_regularizer(reg)
+        self.strength = strength

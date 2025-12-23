@@ -1,4 +1,4 @@
-from numbers import Integral as integer
+from numbers import Integral as integer, Real
 import numpy as np
 import pandas as pd
 
@@ -26,7 +26,8 @@ def test_integrity(
         kelly_fraction=None, 
         confidence=None, 
         volatility_array=None,
-        hist_bins=None
+        hist_bins=None,
+        uncertainty_radius=None
     ):
     asset_quantity = len(tickers)
     if mean is not None:
@@ -62,6 +63,9 @@ def test_integrity(
     if hist_bins is not None:
         if hist_bins < 0 or not isinstance(hist_bins, integer):
             raise DataError(f"Invalid histogram bins. Expected integer within bounds [1, inf], got {hist_bins}")
+    if uncertainty_radius is not None:
+        if uncertainty_radius <= 0 or not isinstance(uncertainty_radius, Real):
+            raise DataError(f"Invalid uncertainty set radius given. Expected real number within bounds (0, inf), got {uncertainty_radius}")
 
 # Extract and trim for optimizers. Returns data and tickers
 def extract_trim(data):

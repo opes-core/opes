@@ -8,14 +8,14 @@ OPES provides a plethora of quantitative portfolio optimizers with a comprehensi
 
 ## Key Features
 
-### Multiple Porfolio Objectives
+### Porfolio Objectives
 
 #### Utility Theory
 - Quadratic Utility
 - Constant Relative Risk Aversion
 - Constant Absolute Risk Aversion
 - Hyperbolic Absolute Risk Aversion
-- Kelly Criterion and fractions
+- Kelly Criterion and Fractions
 
 #### Markowitz Paradigm
 - Maximum Mean
@@ -40,22 +40,26 @@ OPES provides a plethora of quantitative portfolio optimizers with a comprehensi
 - Entropic Risk Metric
 
 #### Online Learning
-- BCRP with regularization (FTL/FTRL)
+- BCRP with regularization (FTL/FTRL support)
 - Exponential Gradient
 
-### Stochastic Slippage Cost Models for Backtesting
+#### Distributionally Robust Optimization (Kullback-Leibler)
+- Distributionally Robust Maximum Mean
+- Distributionally Robust Kelly and Fractions
+
+### Slippage Models
 - Constant
 - Gamma
 - Lognormal
 - Inverse Gaussian
 - Compound Poisson-Lognormal
 
-### Flexible Regularization Schemes
+### Regularization Schemes
 - L2
 - Entropy
 - Maximum Weight
 
-### Comprehensive Metrics
+### Backtest Metrics
  - Sharpe Ratio
  - Sortino Ratio
  - Volatility
