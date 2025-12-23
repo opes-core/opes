@@ -275,3 +275,160 @@ class RiskParity(Optimizer):
             return self.weights
         else:
             raise OptimizationError(f"Risk parity optimization failed: {result.message}")
+
+class REPO(Optimizer):
+    """
+    Return-Entropy Portfolio Optimizer (REPO).
+
+    Optimizes the portfolio by balancing expected returns against the Shannon entropy 
+    of the portfolio's return distribution. Higher entropy implies a more 
+    uncertain/spread-out return distribution.
+    """
+    def __init__(self, risk_aversion=1, reg=None, strength=1):
+        """
+        Initializes the REPO optimizer.
+
+        :param risk_aversion: Scalar weighting the importance of entropy (risk) relative to mean return.
+        :param reg: A regularization function or name.
+        :param strength: Scalar multiplier for the regularization penalty.
+        """
+        self.identity = "repo"
+        self.reg = find_regularizer(reg)
+        self.strength = strength
+        self.risk_aversion = risk_aversion
+        self.mean = None
+
+        self.tickers = None
+        self.weights = None
+    
+    def prepare_optimization_inputs(self, data, weight_bounds, w, bins):
+        """
+        Processes input data, calculates mean returns, and validates histogram-based parameters.
+
+        :param data: Input OHLCV or return data.
+        :param weight_bounds: Tuple of (min_weight, max_weight).
+        :param w: Initial weight vector.
+        :param bins: Number of bins for the return distribution histogram.
+        :return: Cleaned return data array.
+        """
+        # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
+        self.tickers, data = extract_trim(data)
+        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+        self.mean = np.mean(data, axis=0)
+        
+        # Functions to test data integrity and find optimization constraint
+        test_integrity(tickers=self.tickers, weights=self.weights, bounds=weight_bounds, mean=self.mean, hist_bins=bins)
+        return data
+    
+    def optimize(self, data=None, weight_bounds=(0,1), w=None, bin=20):
+        """
+        Executes the Return-Entropy optimization.
+
+        Minimizes the objective: -Mean + (risk_aversion * Entropy) + Penalty.
+
+        :param data: Input data for optimization.
+        :param weight_bounds: Boundary constraints for asset weights.
+        :param w: Initial weight vector.
+        :param bin: Number of bins used to estimate the return probability distribution.
+        :return: Optimized weight vector.
+        """
+        # Preparing optimization and finding constraint
+        trimmed_return_data = self.prepare_optimization_inputs(data, weight_bounds, w, bin)
+        constraint = find_constraint(weight_bounds)
+        w = self.weights
+        
+        # Optimization objective and results
+        def f(w):
+            X = trimmed_return_data @ w
+            # Constructing histogram
+            counts = np.histogram(X, bins=bin, density=False)[0]
+            probabilities = counts / counts.sum()
+            probabilities = probabilities[probabilities > 0]
+            # Computing both the terms
+            mean_term = self.mean @ w
+            entropy_term = -np.sum(probabilities * np.log(probabilities))
+            return -mean_term + self.risk_aversion * entropy_term + self.strength * self.reg(w)
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        if result.success:
+            self.weights = result.x
+            return self.weights
+        else:
+            raise OptimizationError("REPO optimization failed")
+
+class DEPO(Optimizer):
+    """
+    Discrete-Entropy Portfolio Optimizer (DEPO).
+
+    Combines Kelly Criterion (logarithmic wealth maximization) with a penalty 
+    based on the Kullback-Leibler (KL) divergence between the portfolio's return 
+    distribution and a uniform distribution.
+    """
+    def __init__(self, risk_aversion=1, reg=None, strength=1):
+        """
+        Initializes the DEPO optimizer.
+
+        :param risk_aversion: Scalar weighting applied to the KL divergence penalty.
+        :param reg: A regularization function or name.
+        :param strength: Scalar multiplier for the regularization penalty.
+        """
+        self.identity = "depo"
+        self.reg = find_regularizer(reg)
+        self.strength = strength
+        self.risk_aversion = risk_aversion
+
+        self.tickers = None
+        self.weights = None
+    
+    def prepare_optimization_inputs(self, data, weight_bounds, w, bins):
+        """
+        Processes data and validates integrity for divergence-based optimization.
+
+        :param data: Input OHLCV or return data.
+        :param weight_bounds: Tuple of (min_weight, max_weight).
+        :param w: Initial weight vector.
+        :param bins: Number of bins for the return distribution histogram.
+        :return: Cleaned return data array.
+        """
+        # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
+        self.tickers, data = extract_trim(data)
+        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+        
+        # Functions to test data integrity and find optimization constraint
+        test_integrity(tickers=self.tickers, weights=self.weights, bounds=weight_bounds, hist_bins=bins)
+        return data
+    
+    def optimize(self, data=None, weight_bounds=(0,1), w=None, hist_bin=20):
+        """
+        Executes the Discrete-Entropy optimization.
+
+        Minimizes the objective: -Expected_Log_Return + (risk_aversion * KL_Divergence) + Penalty.
+
+        :param data: Input data for optimization.
+        :param weight_bounds: Boundary constraints for asset weights.
+        :param w: Initial weight vector.
+        :param hist_bin: Number of bins used to estimate the probability distribution.
+        :return: Optimized weight vector.
+        """
+        # Preparing optimization and finding constraint
+        trimmed_return_data = self.prepare_optimization_inputs(data, weight_bounds, w, hist_bin)
+        constraint = find_constraint(weight_bounds)
+        w = self.weights
+        
+        # Optimization objective and results
+        def f(w):
+            X = trimmed_return_data @ w
+            # Constructing histogram
+            counts = np.histogram(X, bins=hist_bin, density=False)[0]
+            probabilities = counts / counts.sum()
+            probabilities = probabilities[probabilities > 0]
+            uniform_prob = np.ones(len(probabilities)) / len(probabilities)
+            # Computing both the terms
+            X = np.maximum(X, -0.99)
+            kullback_leibler_penalty = np.sum(probabilities * np.log(probabilities / uniform_prob))
+            return -np.mean(np.log(1 + X)) + self.risk_aversion * kullback_leibler_penalty + self.strength * self.reg(w)
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        if result.success:
+            self.weights = result.x
+            return self.weights
+        else:
+            raise OptimizationError("DEPO optimization failed")

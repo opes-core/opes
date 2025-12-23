@@ -49,3 +49,21 @@ class Optimizer(ABC):
                 "Absolute Max Weight" : max_weight
             }
             return statistics
+    
+    def clean_weights(self, threshold=1e-8):
+        """
+        Cleans the portfolio weights by setting very small positions to zero.
+
+        Any weight whose absolute value is below the specified threshold is replaced with zero.
+        This helps remove negligible allocations while keeping the array structure intact.
+
+        :param threshold: Float specifying the minimum absolute weight to retain (default: 1e-8).
+        :type threshold: float
+        :raises PortfolioError: If weights have not been calculated or are None.
+        """
+        if self.weights is None:
+            raise PortfolioError("Weights not optimized")
+        else:
+            self.weights[np.abs(self.weights) < threshold] = 0
+            self.weights /= np.abs(self.weights).sum()
+            return self.weights

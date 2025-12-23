@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opes"
-version = "0.1.1"
+version = "0.2.0"
 description = "Open-source Python module for portfolio management with a plethora of portfolio schemes, stochastic backtesting and comprehensive metrics"
 readme = "README.md"
 requires-python = ">=3.10"

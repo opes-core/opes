@@ -296,3 +296,76 @@ class MeanEVaR(Optimizer):
             return self.weights
         else:
             raise OptimizationError("Mean EVaR optimization failed")
+
+class EntropicRisk(Optimizer):
+    """
+    Optimizer for minimizing the Entropic Risk Measure (ERM).
+
+    ERM is a risk measure derived from exponential utility, defined as 
+    (1/γ) * log(E[exp(-γ * R)]), where γ is the risk aversion coefficient.
+    """
+    def __init__(self, risk_aversion=1, reg=None, strength=1):
+        """
+        Initializes the EntropicRisk optimizer.
+
+        :param risk_aversion: The risk aversion coefficient (gamma). Must be non-zero.
+        :param reg: A regularization function or name.
+        :param strength: Scalar multiplier for the regularization penalty.
+        """
+        self.identity = "erm"
+        self.reg = find_regularizer(reg)
+        self.strength = strength
+        self.risk_aversion = risk_aversion
+
+        self.tickers = None
+        self.weights = None
+    
+    def prepare_optimization_inputs(self, data, weight_bounds, w):
+        """
+        Processes input data, validates risk aversion bounds, and prepares weights.
+
+        :param data: Input OHLCV or return data.
+        :param weight_bounds: Tuple of (min_weight, max_weight).
+        :param w: Initial weights.
+        :return: Cleaned return data array.
+        :raises PortfolioError: If risk_aversion is set to zero.
+        """
+        # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
+        self.tickers, data = extract_trim(data)
+        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+
+        # Checking ERM risk aversion bounds
+        if self.risk_aversion == 0:
+            raise PortfolioError(f"Invalid ERM risk aversion. Expected within bounds (0, inf), Got {self.risk_aversion}")
+        
+        # Functions to test data integrity and find optimization constraint
+        test_integrity(tickers=self.tickers, weights=self.weights, bounds=weight_bounds)
+        return data
+    
+    def optimize(self, data=None, weight_bounds=(0,1), w=None):
+        """
+        Executes the Entropic Risk Measure optimization.
+
+        Minimizes the convex entropic risk metric plus a regularization penalty.
+
+        :param data: Input data for optimization.
+        :param weight_bounds: Boundary constraints for asset weights.
+        :param w: Initial weight vector.
+        :return: Optimized weight vector.
+        :raises OptimizationError: If the SLSQP solver fails to converge.
+        """
+        # Preparing optimization and finding constraint
+        trimmed_return_data = self.prepare_optimization_inputs(data, weight_bounds, w)
+        constraint = find_constraint(weight_bounds)
+        w = self.weights
+        
+        # Optimization objective and results
+        def f(w):
+            X = trimmed_return_data @ w
+            return 1/self.risk_aversion * np.log(np.mean(np.exp(-self.risk_aversion * X))) + self.strength * self.reg(w)
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        if result.success:
+            self.weights = result.x
+            return self.weights
+        else:
+            raise OptimizationError("Entropic risk metric optimization failed")

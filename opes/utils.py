@@ -1,3 +1,4 @@
+from numbers import Integral as integer
 import numpy as np
 import pandas as pd
 
@@ -24,39 +25,43 @@ def test_integrity(
         bounds=None, 
         kelly_fraction=None, 
         confidence=None, 
-        volatility_array=None
+        volatility_array=None,
+        hist_bins=None
     ):
     asset_quantity = len(tickers)
     if mean is not None:
         if len(mean) != asset_quantity:
-            raise DataError(f"Mean vector shape mismatch. Expected {asset_quantity}, Got {len(mean)}")
+            raise DataError(f"Mean vector shape mismatch. Expected {asset_quantity}, got {len(mean)}")
     if cov is not None:
         if asset_quantity != cov.shape[0] or (cov.shape[0] != cov.shape[1]):
-            raise DataError(f"Covariance matrix shape mismatch. Expected ({asset_quantity}, {asset_quantity}), Got {cov.shape}")
+            raise DataError(f"Covariance matrix shape mismatch. Expected ({asset_quantity}, {asset_quantity}), got {cov.shape}")
         try:
             np.linalg.inv(cov)
         except np.linal.LinAlgError:
             raise DataError(f"Singular covariance matrix")
     if weights is not None:
         if len(weights) != asset_quantity:
-            raise DataError(f"Weight vector shape mismatch. Expected {asset_quantity}, Got {len(weights)}")
+            raise DataError(f"Weight vector shape mismatch. Expected {asset_quantity}, got {len(weights)}")
     if bounds is not None:
         bounds = tuple(bounds)
         if len(bounds) != 2:
-            raise DataError(f"Invalid weight bounds length. Expected 2, Got {len(bounds)}")
+            raise DataError(f"Invalid weight bounds length. Expected 2, got {len(bounds)}")
         if bounds[0] >= bounds[1]:
             raise DataError(f"Invalid weight bounds. Bounds must be of the format (start, end)")
     if kelly_fraction is not None:
         if kelly_fraction <= 0 or kelly_fraction > 1:
-            raise DataError(f"Invalid Kelly criterion fraction. Must be bounded within (0,1], Got {kelly_fraction}")
+            raise DataError(f"Invalid Kelly criterion fraction. Must be bounded within (0,1], got {kelly_fraction}")
     if confidence is not None:
         if confidence <=0 or confidence >= 1:
-            raise DataError(f"Invalid confidence value. Must be bounded within (0,1), Got {confidence}")
+            raise DataError(f"Invalid confidence value. Must be bounded within (0,1), got {confidence}")
     if volatility_array is not None:
         if len(volatility_array) != asset_quantity:
-            raise DataError(f"Volatility array length mismatch. Expected {len(tickers)}, Got {len(volatility_array)}")
+            raise DataError(f"Volatility array length mismatch. Expected {len(tickers)}, got {len(volatility_array)}")
         if (volatility_array <= 0).any():
             raise DataError(f"Invalid volatility values: volatility array must contain strictly positive values.")
+    if hist_bins is not None:
+        if hist_bins < 0 or not isinstance(hist_bins, integer):
+            raise DataError(f"Invalid histogram bins. Expected integer within bounds [1, inf], got {hist_bins}")
 
 # Extract and trim for optimizers. Returns data and tickers
 def extract_trim(data):

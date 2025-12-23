@@ -8,43 +8,67 @@ OPES provides a plethora of quantitative portfolio optimizers with a comprehensi
 
 ## Key Features
 
-- **15+ portfolio schemes**: Mean-Variance, Kelly Criterion, CVaR, Exponential Gradient and more
-- **Advanced backtesting**: Historical performance analysis with comprehensive metrics
-- **Stochastic slippage models**: Gamma, Lognormal, Inverse Gaussian, Poisson Jump or constant costs
-- **Flexible regularization**: Entropy, L2, and MaxWeight regularizers
-- **Rich metrics**: Sharpe, Sortino, Calmar, Max Drawdown, Skewness, Kurtosis and more
+### Multiple Porfolio Objectives
 
-## Portfolio Methods
-
-### Utility Theory
+#### Utility Theory
 - Quadratic Utility
 - Constant Relative Risk Aversion
 - Constant Absolute Risk Aversion
 - Hyperbolic Absolute Risk Aversion
 - Kelly Criterion and fractions
 
-### Markowitz Paradigm
+#### Markowitz Paradigm
 - Maximum Mean
 - Minimum Variance
 - Mean Variance
 - Maximum Sharpe
 
-### Principled Heuristics
+#### Principled Heuristics
+- 1/N
 - Risk Parity
 - Inverse Volatility
 - Softmax Mean
 - Maximum Diversification
-- 1/N
+- Return Entropy Portfolio Optimization
+- Discrete Entropy Portfolio Optimization
 
-### Risk Measures
+#### Risk Measures
 - CVaR
 - Mean-CVaR
 - EVaR
 - Mean-EvaR
+- Entropic Risk Metric
 
-### Online Learning
+#### Online Learning
 - BCRP with regularization (FTL/FTRL)
 - Exponential Gradient
+
+### Stochastic Slippage Cost Models for Backtesting
+- Constant
+- Gamma
+- Lognormal
+- Inverse Gaussian
+- Compound Poisson-Lognormal
+
+### Flexible Regularization Schemes
+- L2
+- Entropy
+- Maximum Weight
+
+### Comprehensive Metrics
+ - Sharpe Ratio
+ - Sortino Ratio
+ - Volatility
+ - Average Return
+ - Total Return
+ - CAGR
+ - Maximum Drawdown
+ - Calmar Ratio
+ - Value at Risk 95
+ - Conditional Value at Risk 95
+ - Skew
+ - Kurtosis
+ - Omega Ratio
 
 ## Installation
 
