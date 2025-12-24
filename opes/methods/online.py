@@ -67,7 +67,7 @@ class BCRP(Optimizer):
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError("BCRP optimization failed")
+            raise OptimizationError(f"BCRP optimization failed: {result.message}")
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -131,17 +131,16 @@ class ExponentialGradient(Optimizer):
         :return: The newly updated weight vector.
         """
         # Preparing optimization and finding constraint
+        # EG uses weight update method, so it takes the most recent return and uses it to update
         recent_return = self.prepare_inputs(data, w)[-1]
         portfolio_return = recent_return @ self.weights
 
         # Exponential Gradient update & normalization
-        # We apply the log-sum-exp technique along with subtracting the maximum value from all other exponents
-        # Since the weights are exponentiated, multiplying by a positive constant doesnt change the original weights
-        # This improves the numerical stability of the update rule
+        # We apply the log-sum-exp technique with subtracting the maximum to improve numerical stability
+        # Weights are shift-invariant since they are exponentiated
         log_w = np.log(self.weights) + self.learning_rate * recent_return / portfolio_return
         log_w -= log_w.max()
         new_weights = np.exp(log_w)
         new_weights /= new_weights.sum()
-
 
         return self.weights

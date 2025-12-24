@@ -75,7 +75,7 @@ class CVaR(Optimizer):
             self.weights = result.x[:-1]
             return self.weights
         else:
-            raise OptimizationError("CVaR optimization failed")
+            raise OptimizationError(f"CVaR optimization failed: {result.message}")
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -116,25 +116,26 @@ class MeanCVaR(Optimizer):
         self.tickers = None
         self.weights = None
     
-    def prepare_optimization_inputs(self, data, weight_bounds, w):
+    def prepare_optimization_inputs(self, data, weight_bounds, w, custom_mean=None):
         """
         Extracts returns, calculates mean return vector, and validates CVaR parameters.
 
         :param data: Input OHLCV data grouped by ticker.
         :param weight_bounds: Weight constraints.
         :param w: Initial weights.
+        :param custom_mean: Custom mean vector
         :return: Cleaned return data array.
         """
         # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
         self.tickers, data = extract_trim(data)
-        self.mean = np.mean(data, axis=1)
+        self.mean = np.mean(data, axis=0) if custom_mean is None else custom_mean
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
 
         # Functions to test data integrity and find optimization constraint
         test_integrity(tickers=self.tickers, weights=self.weights, mean=self.mean, bounds=weight_bounds, confidence=self.alpha)
         return data
     
-    def optimize(self, data=None, weight_bounds=(0,1), w=None):
+    def optimize(self, data=None, weight_bounds=(0,1), w=None, custom_mean=None):
         """
         Executes Mean-CVaR optimization.
         
@@ -143,10 +144,11 @@ class MeanCVaR(Optimizer):
         :param data: Input optimization data.
         :param weight_bounds: Weight constraints.
         :param w: Initial weights.
+        :param custom_mean: Custom mean vector
         :return: Optimized weight vector.
         """
         # Preparing optimization and finding constraint
-        trimmed_return_data = self.prepare_optimization_inputs(data, weight_bounds, w)
+        trimmed_return_data = self.prepare_optimization_inputs(data, weight_bounds, w, custom_mean=custom_mean)
         constraint = find_constraint(weight_bounds, constraint_type=2)
         w = self.weights
         
@@ -164,7 +166,7 @@ class MeanCVaR(Optimizer):
             self.weights = result.x[:-1]
             return self.weights
         else:
-            raise OptimizationError("Mean CVaR optimization failed")
+            raise OptimizationError(f"Mean CVaR optimization failed: {result.message}")
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -246,7 +248,7 @@ class EVaR(Optimizer):
             self.weights = result.x[:-1]
             return self.weights
         else:
-            raise OptimizationError("EVaR optimization failed")
+            raise OptimizationError(f"EVaR optimization failed: {result.message}")
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -287,7 +289,7 @@ class MeanEVaR(Optimizer):
         self.tickers = None
         self.weights = None
     
-    def prepare_optimization_inputs(self, data, weight_bounds, w):
+    def prepare_optimization_inputs(self, data, weight_bounds, w, custom_mean=None):
         """
         Processes data and calculates mean returns for the Mean-EVaR framework.
 
@@ -295,17 +297,18 @@ class MeanEVaR(Optimizer):
         :param weight_bounds: Tuple of (min_weight, max_weight).
         :param w: Initial weights.
         :return: Cleaned return data array.
+        :param custom_mean: Custom mean vector
         """
         # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
         self.tickers, data = extract_trim(data)
-        self.mean = np.mean(data, axis=1)
+        self.mean = np.mean(data, axis=0) if custom_mean is None else custom_mean
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
 
         # Functions to test data integrity and find optimization constraint
         test_integrity(tickers=self.tickers, weights=self.weights, bounds=weight_bounds, confidence=self.alpha)
         return data
     
-    def optimize(self, data=None, weight_bounds=(0,1), w=None):
+    def optimize(self, data=None, weight_bounds=(0,1), w=None, custom_mean=None):
         """
         Executes Mean-EVaR optimization.
         
@@ -314,10 +317,11 @@ class MeanEVaR(Optimizer):
         :param data: Input optimization data.
         :param weight_bounds: Weight constraints.
         :param w: Initial weights.
+        :param custom_mean: Custom mean vector
         :return: Optimized weight vector.
         """
         # Preparing optimization and finding constraint
-        trimmed_return_data = self.prepare_optimization_inputs(data, weight_bounds, w)
+        trimmed_return_data = self.prepare_optimization_inputs(data, weight_bounds, w, custom_mean=custom_mean)
         constraint = find_constraint(weight_bounds, constraint_type=2)
         w = self.weights
         
@@ -334,7 +338,7 @@ class MeanEVaR(Optimizer):
             self.weights = result.x[:-1]
             return self.weights
         else:
-            raise OptimizationError("Mean EVaR optimization failed")
+            raise OptimizationError(f"Mean EVaR optimization failed: {result.message}")
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -420,7 +424,7 @@ class EntropicRisk(Optimizer):
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError("Entropic risk metric optimization failed")
+            raise OptimizationError(f"Entropic risk metric optimization failed: {result.message}")
 
     def set_regularizer(self, reg=None, strength=1):
         """

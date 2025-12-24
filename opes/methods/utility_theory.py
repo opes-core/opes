@@ -70,7 +70,7 @@ class Kelly(Optimizer):
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError("Kelly criterion optimization failed")
+            raise OptimizationError(f"Kelly criterion optimization failed: {result.message}")
     
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -148,7 +148,7 @@ class QuadraticUtility(Optimizer):
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError("Quadratic utility optimization failed")
+            raise OptimizationError(f"Quadratic utility optimization failed: {result.message}")
     
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -226,7 +226,7 @@ class CARA(Optimizer):
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError("CARA optimization failed")
+            raise OptimizationError(f"CARA optimization failed: {result.message}")
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -308,7 +308,7 @@ class CRRA(Optimizer):
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError("CRRA optimization failed")
+            raise OptimizationError(f"CRRA optimization failed: {result.message}")
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -396,7 +396,7 @@ class HARA(Optimizer):
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError("HARA optimization failed")
+            raise OptimizationError(f"HARA optimization failed: {result.message}")
 
     def set_regularizer(self, reg=None, strength=1):
         """

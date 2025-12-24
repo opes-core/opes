@@ -28,36 +28,38 @@ class MaxMean(Optimizer):
         self.tickers = None
         self.weights = None
     
-    def prepare_optimization_inputs(self, data, weight_bounds, w):
+    def prepare_optimization_inputs(self, data, weight_bounds, w, custom_mean=None):
         """
         Processes input data, extracts tickers, calculates mean returns, and validates integrity.
 
         :param data: Input OHLCV data grouped by ticker.
         :param weight_bounds: Tuple of (min_weight, max_weight) for optimization.
         :param w: Initial weights; if None, defaults to an equal-weighted portfolio.
+        :param custom_mean: Custom mean vector
         """
         # Extracting trimmed return data from OHLCV and obtaining tickers
         self.tickers, data = extract_trim(data)
         
         # Checking for mean and weights and assigning optimization data accordingly
-        self.mean = np.mean(data, axis=0)
+        self.mean = np.mean(data, axis=0) if custom_mean is None else custom_mean
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
 
         # Functions to test data integrity and find optimization constraint
         test_integrity(tickers=self.tickers, weights=self.weights, mean=self.mean, bounds=weight_bounds)
     
-    def optimize(self, data=None, weight_bounds=(0,1), w=None):
+    def optimize(self, data=None, weight_bounds=(0,1), w=None, custom_mean=None):
         """
         Executes the Maximum Mean optimization.
 
         :param data: Input data for optimization.
         :param weight_bounds: Boundary constraints for each asset weight.
         :param w: Initial weight vector.
+        :param custom_mean: Custom mean vector
         :return: Optimized weight vector as a numpy array.
         :raises OptimizationError: If the SLSQP solver fails to converge.
         """
         # Preparing optimization and finding constraint
-        self.prepare_optimization_inputs(data, weight_bounds, w)
+        self.prepare_optimization_inputs(data, weight_bounds, w, custom_mean=custom_mean)
         constraint = find_constraint(weight_bounds)
         w = self.weights
         
@@ -69,7 +71,7 @@ class MaxMean(Optimizer):
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError("Maximum mean optimization failed")
+            raise OptimizationError(f"Maximum mean optimization failed: {result.message}")
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -106,36 +108,45 @@ class MinVariance(Optimizer):
         self.tickers = None
         self.weights = None
     
-    def prepare_optimization_inputs(self, data, weight_bounds, w):
+    def prepare_optimization_inputs(self, data, weight_bounds, w, custom_cov=None):
         """
         Processes input data, calculates the covariance matrix, and validates integrity.
 
         :param data: Input OHLCV data grouped by ticker.
         :param weight_bounds: Tuple of (min_weight, max_weight).
         :param w: Initial weights.
+        :param custom_cov: Custom covariance from the user.
         """
         # Extracting trimmed return data from OHLCV and obtaining tickers
         self.tickers, data = extract_trim(data)
     
         # Checking for covariance and weights and assigning optimization data accordingly
-        self.covariance = np.cov(data, rowvar=False)
+        if custom_cov is None:
+            # Handling invertibility using the small epsilon * identity matrix
+            # small epsilon scales with the trace of the covariance
+            self.covariance = np.cov(data, rowvar=False)
+            epsilon = 1e-3 * np.trace(self.covariance) / self.covariance.shape[0]
+            self.covariance =  self.covariance + epsilon * np.eye(self.covariance.shape[0])
+        else:
+            self.covariance = custom_cov
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
 
         # Functions to test data integrity and find optimization constraint
         test_integrity(tickers=self.tickers, weights=self.weights, cov=self.covariance, bounds=weight_bounds)
     
-    def optimize(self, data=None, weight_bounds=(0,1), w=None):
+    def optimize(self, data=None, weight_bounds=(0,1), w=None, custom_cov=None):
         """
         Executes the Global Minimum Variance optimization.
 
         :param data: Input data for optimization.
         :param weight_bounds: Boundary constraints for each asset weight.
         :param w: Initial weight vector.
+        :param custom_cov: Custom covariance matrix from the user.
         :return: Optimized weight vector.
         :raises OptimizationError: If optimization fails.
         """
         # Preparing optimization and finding constraint
-        self.prepare_optimization_inputs(data, weight_bounds, w)
+        self.prepare_optimization_inputs(data, weight_bounds, w, custom_cov=custom_cov)
         constraint = find_constraint(weight_bounds)
         w = self.weights
         
@@ -147,7 +158,7 @@ class MinVariance(Optimizer):
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError("Global minimum optimization failed")
+            raise OptimizationError(f"Global minimum optimization failed: {result.message}")
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -188,36 +199,47 @@ class MeanVariance(Optimizer):
         self.tickers = None
         self.weights = None
     
-    def prepare_optimization_inputs(self, data, weight_bounds, w):
+    def prepare_optimization_inputs(self, data, weight_bounds, w, custom_cov=None, custom_mean=None):
         """
         Processes input data, calculates mean returns and covariance, and validates integrity.
 
         :param data: Input OHLCV data grouped by ticker.
         :param weight_bounds: Tuple of (min_weight, max_weight).
         :param w: Initial weights.
+        :param custom_cov: Custom covariance from the user.
+        :param custom_mean: Custom mean from the user.
         """
         # Extracting trimmed return data from OHLCV and obtaining tickers
         self.tickers, data = extract_trim(data)
     
         # Checking for mean, covaraince and weights and assigning optimization data accordingly
-        self.mean = np.mean(data, axis=0)
-        self.covariance = np.cov(data, rowvar=False)
+        self.mean = np.mean(data, axis=0) if custom_mean is None else custom_mean
+        if custom_cov is None:
+            # Handling invertibility using the small epsilon * identity matrix
+            # small epsilon scales with the trace of the covariance
+            self.covariance = np.cov(data, rowvar=False)
+            epsilon = 1e-3 * np.trace(self.covariance) / self.covariance.shape[0]
+            self.covariance =  self.covariance + epsilon * np.eye(self.covariance.shape[0])
+        else:
+            self.covariance = custom_cov
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
 
         # Functions to test data integrity and find optimization constraint
         test_integrity(tickers=self.tickers, weights=self.weights, cov=self.covariance, bounds=weight_bounds)
     
-    def optimize(self, data=None, weight_bounds=(0,1), w=None):
+    def optimize(self, data=None, weight_bounds=(0,1), w=None, custom_cov=None, custom_mean=None):
         """
         Executes the Mean-Variance optimization.
 
         :param data: Input data for optimization.
         :param weight_bounds: Boundary constraints for each asset weight.
         :param w: Initial weight vector.
+        :param custom_cov: Custom covariance from the user.
+        :param custom_mean: Custom mean from the user.
         :return: Optimized weight vector.
         """
         # Preparing optimization and finding constraint
-        self.prepare_optimization_inputs(data, weight_bounds, w)
+        self.prepare_optimization_inputs(data, weight_bounds, w, custom_cov=custom_cov, custom_mean=custom_mean)
         constraint = find_constraint(weight_bounds)
         w = self.weights
         
@@ -229,7 +251,7 @@ class MeanVariance(Optimizer):
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError("Mean variance optimization failed")
+            raise OptimizationError(f"Mean variance optimization failed: {result.message}")
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -270,36 +292,47 @@ class MaxSharpe(Optimizer):
         self.tickers = None
         self.weights = None
     
-    def prepare_optimization_inputs(self, data, weight_bounds, w):
+    def prepare_optimization_inputs(self, data, weight_bounds, w, custom_cov=None, custom_mean=None):
         """
         Processes input data, calculates mean returns and covariance, and validates integrity.
 
         :param data: Input OHLCV data grouped by ticker.
         :param weight_bounds: Tuple of (min_weight, max_weight).
         :param w: Initial weights.
+        :param custom_cov: Custom covariance from the user.
+        :param custom_mean: Custom mean from the user.
         """
         # Extracting trimmed return data from OHLCV and obtaining tickers
         self.tickers, data = extract_trim(data)
     
         # Checking for mean, covariance and weights and assigning optimization data accordingly
-        self.mean = np.mean(data, axis=0)
-        self.covariance = np.cov(data, rowvar=False)
+        self.mean = np.mean(data, axis=0) if custom_mean is None else custom_mean
+        if custom_cov is None:
+            # Handling invertibility using the small epsilon * identity matrix
+            # small epsilon scales with the trace of the covariance
+            self.covariance = np.cov(data, rowvar=False)
+            epsilon = 1e-3 * np.trace(self.covariance) / self.covariance.shape[0]
+            self.covariance =  self.covariance + epsilon * np.eye(self.covariance.shape[0])
+        else:
+            self.covariance = custom_cov
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
 
         # Functions to test data integrity and find optimization constraint
         test_integrity(tickers=self.tickers, weights=self.weights, cov=self.covariance, bounds=weight_bounds)
     
-    def optimize(self, data=None, weight_bounds=(0,1), w=None):
+    def optimize(self, data=None, weight_bounds=(0,1), w=None, custom_cov=None, custom_mean=None):
         """
         Executes the Maximum Sharpe Ratio optimization.
 
         :param data: Input data for optimization.
         :param weight_bounds: Boundary constraints for each asset weight.
         :param w: Initial weight vector.
+        :param custom_cov: Custom covariance from the user.
+        :param custom_mean: Custom mean from the user.
         :return: Optimized weight vector.
         """
         # Preparing optimization and finding constraint
-        self.prepare_optimization_inputs(data, weight_bounds, w)
+        self.prepare_optimization_inputs(data, weight_bounds, w, custom_cov=custom_cov, custom_mean=custom_mean)
         constraint = find_constraint(weight_bounds)
         w = self.weights
         
@@ -311,7 +344,7 @@ class MaxSharpe(Optimizer):
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError("Maximum sharpe optimization failed")
+            raise OptimizationError(f"Maximum sharpe optimization failed: {result.message}")
 
     def set_regularizer(self, reg=None, strength=1):
         """

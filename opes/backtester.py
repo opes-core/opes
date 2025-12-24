@@ -1,12 +1,13 @@
 from numbers import Real
+import time 
 
 import numpy as np
 import pandas as pd
 import scipy.stats as scistats
 import matplotlib.pyplot as plt
 
-from opes.errors import PortfolioError
-from opes.utils import slippage, extract_data
+from opes.errors import PortfolioError, DataError
+from opes.utils import slippage, extract_trim
 
 class Backtester():
     
@@ -18,20 +19,23 @@ class Backtester():
         self.cost = cost
     
     def backtest_integrity_check(self, optimizer, rebalance_freq, seed):
-        # Checking optimizer class
+        # Checking train and test data length
+        if len(self.train) < 5:
+            raise DataError(f"Insufficient training data for backtest. Expected len(data) >= 5, got {len(self.train)}")
+        if len(self.train) <= 0:
+            raise DataError(f"Insufficient training data for backtest. Expected len(data) > 0, got {len(self.train)}")
+        # Checking optimizer validity
         try:
             optimizer.identity
         except:
             raise PortfolioError(f"Portfolio object not given. Got {type(optimizer)}")
         # Checking rebalance frequency type and validity
-        if rebalance_freq <= 0 or not isinstance(rebalance_freq, int):
-            raise PortfolioError(f"Invalid rebalance frequency. Expected integer within bounds [1,T], Got {rebalance_freq}")
+        if rebalance_freq is not None:
+            if rebalance_freq <= 0 or not isinstance(rebalance_freq, int):
+                raise PortfolioError(f"Invalid rebalance frequency. Expected integer within bounds [1,T], Got {rebalance_freq}")
         # Validiating numpy seed
         if seed is not None and not isinstance(seed, int):
             raise PortfolioError(f"Invalid seed. Expected integer or None, Got {seed}")
-        # Training data validity
-        if len(self.train) <= 5:
-            raise PortfolioError(f"Training data insufficient. {len(self.train)} timesteps too short")
         # Cost model validity - per model check
         if len(self.cost) != 1:
             raise PortfolioError(f"Invalid cost model. Cost model must be a dictionary of length 1, Got {len(self.cost)}")
@@ -51,7 +55,7 @@ class Backtester():
         # Running backtester integrity checks
         self.backtest_integrity_check(optimizer, rebalance_freq, seed)
         # Backtest loop
-        test_data = extract_data(self.test)
+        test_data = extract_trim(self.test)[1]
         # Static weight backtest
         if rebalance_freq is None:
             weights = optimizer.optimize(self.train)
@@ -61,15 +65,25 @@ class Backtester():
             weights = [None] * len(test_data)
             temp_weights = optimizer.optimize(self.train)
             weights[0] = temp_weights
-            for i in range(1, len(test_data)):
-                if i % rebalance_freq == 0:
-                    # CONFIRM LOOKAHEAD BIAS
-                    temp_weights = optimizer.optimize(pd.concat([self.train, self.test.iloc[0:i-1]]).dropna(), w=temp_weights)
-                weights[i] = temp_weights
+            for t in range(1, len(test_data)):
+                if t % rebalance_freq == 0:
+                    # NO LOOKAHEAD BIAS
+                    # Rebalance at timestep t using only past data (up to t, exclusive) to avoid lookahead bias
+                    # Training data is pre-cleaned (no NaNs), test data up to t is also NaN-free
+                    # Concatenating them preserves this property; dropna() handles edge cases safely
+                    # The optimizer therefore only sees information available until the current decision point
+                    temp_weights = optimizer.optimize(pd.concat([self.train, self.test.iloc[0:t]]).dropna(), w=temp_weights)
+                weights[t] = temp_weights
             weights_array = np.vstack(weights)
         portfolio_returns = np.einsum('ij,ij->i', weights_array, test_data)
-        portfolio_returns -= slippage(weights=weights_array, returns=portfolio_returns, cost=self.cost, numpy_seed=seed)
-        return portfolio_returns
+        costs_array = slippage(weights=weights_array, returns=portfolio_returns, cost=self.cost, numpy_seed=seed)
+        portfolio_returns -= costs_array
+        backtest_data = {
+            'returns': portfolio_returns,
+            'weights': weights_array,
+            'costs': costs_array
+        }
+        return backtest_data
 
     def get_metrics(self, returns):
         # Caching repeated values
@@ -114,18 +128,21 @@ class Backtester():
         results = [round(SHARPE, 5), round(SORTINO, 5), round(CALMAR, 5)] + [round(x*100, 5) for x in values] + [round(SKEW, 5), round(KURTOSIS, 5), round(OMEGA, 5)]
         return dict(zip(performance_metrics, results))
     
-    def plot(self, returns_dict, initial_wealth=1.0):
+    def plot_wealth(self, returns_dict, initial_wealth=1.0, savefig=False):
         if isinstance(returns_dict, np.ndarray):
             returns_dict = {"Strategy": returns_dict}
         plt.figure(figsize=(12, 6))
         for name, returns in returns_dict.items():
             wealth = initial_wealth * np.cumprod(1 + returns)
             plt.plot(wealth, label=name, linewidth=2)
+        plt.yscale("log")
         plt.axhline(y=1, color='black', linestyle=':', label="Breakeven")
         plt.xlabel("Time", fontsize=12)
         plt.ylabel("Wealth", fontsize=12)
         plt.title("Portfolio Wealth Over Time", fontsize=14, fontweight='bold')
         plt.legend(fontsize=10)
-        plt.grid(True, alpha=0.3)
+        plt.grid(True, linestyle=':', linewidth=0.7, alpha=0.7)
         plt.tight_layout()
+        if savefig:
+            plt.savefig(f"plot_{int(time.time()*1000)}.png", dpi=300, bbox_inches='tight')
         plt.show()
