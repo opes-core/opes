@@ -70,7 +70,7 @@ class CVaR(Optimizer):
             X = -trimmed_return_data @ w
             excess = np.mean(np.maximum(X - v, 0.0))
             return (v + excess / (1 - self.alpha) + self.strength * self.reg(w))
-        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(None,None)], constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(None,None)], constraints=constraint)
         if result.success:
             self.weights = result.x[:-1]
             return self.weights
@@ -161,7 +161,7 @@ class MeanCVaR(Optimizer):
             excess = np.mean(np.maximum(X - v, 0.0))
             mean  = self.mean @ w
             return (self.risk_aversion * (v + excess / (1 - self.alpha)) + self.strength * self.reg(w) - mean)
-        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(None,None)], constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(None,None)], constraints=constraint)
         if result.success:
             self.weights = result.x[:-1]
             return self.weights
@@ -243,7 +243,7 @@ class EVaR(Optimizer):
             w,s = x[:-1], x[-1]
             X = trimmed_return_data @ w
             return (1/s) * (np.log(np.mean(np.exp(-s * X))) - np.log(1 - self.alpha)) + self.strength * self.reg(w)
-        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(1e-8,None)], constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(1e-8,None)], constraints=constraint)
         if result.success:
             self.weights = result.x[:-1]
             return self.weights
@@ -333,7 +333,7 @@ class MeanEVaR(Optimizer):
             X = trimmed_return_data @ w
             mean = self.mean @ w
             return self.risk_aversion * ((1/s) * (np.log(np.mean(np.exp(-s * X))) - np.log(1 - self.alpha))) + self.strength * self.reg(w) - mean
-        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(1e-8,None)], constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(w) + [(1e-8,None)], constraints=constraint)
         if result.success:
             self.weights = result.x[:-1]
             return self.weights
@@ -419,7 +419,7 @@ class EntropicRisk(Optimizer):
         def f(w):
             X = trimmed_return_data @ w
             return 1/self.risk_aversion * np.log(np.mean(np.exp(-self.risk_aversion * X))) + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
             return self.weights

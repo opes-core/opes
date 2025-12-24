@@ -4,6 +4,7 @@ import pandas as pd
 
 from opes.errors import DataError, PortfolioError
 
+# Regularizer finding function
 def find_regularizer(reg):
     """
     Return a regularization function based on the specified type.
@@ -13,9 +14,12 @@ def find_regularizer(reg):
     reg : str or None
         The type of regularizer to use. Supported options are:
             - None: No regularization, returns a function that always outputs 0.
+            - "l1": L1 regularization, returns the sum of absolute weights to encourage sparsity.
             - "l2": L2 regularization, returns the sum of squared weights.
             - "maxweight": Maximum weight regularization, returns the largest absolute weight.
             - "entropy": Entropy regularization, returns the sum of |w| * log(|w| + 1e-12) for numerical stability.
+            - "variance": Variance regularization, returns the variance of the weights to encourage balanced allocations; returns 0 for a single weight.
+            - "gini": Gini regularization, returns the mean absolute pairwise difference between weights to penalize concentration and encourage balance.
 
     Returns
     -------
@@ -29,9 +33,12 @@ def find_regularizer(reg):
     """
     regulizers = {
         None: lambda w: 0,
+        "l1": lambda w: np.sum(np.abs(w)),
         "l2": lambda w: np.sum(w ** 2),
         "maxweight": lambda w: max(np.abs(w)),
         "entropy": lambda w: np.sum(np.abs(w) * np.log(np.abs(w) + 1e-12)),
+        "variance": lambda w: np.var(w) if len(w) >= 2 else 0,
+        "gini": lambda w: np.mean(np.abs(w[:, None] - w[None, :]))
     }
     reg = str(reg).lower() if reg is not None else reg
     if reg in regulizers:
@@ -39,6 +46,7 @@ def find_regularizer(reg):
     else:
         raise PortfolioError(f"Unknown regulizer: {reg}")
 
+# Sequence element checker
 def all_elements_are_type(sequence, target):
     """Check if all elements in a sequence are of the specified type."""
     return all(isinstance(i, target) for i in sequence)
@@ -168,37 +176,51 @@ def extract_trim(data):
 # Optimization constraints finding function
 def find_constraint(bounds, constraint_type=1):
     """
-    Generate a linear constraint function for portfolio optimization based on weight bounds.
+    Generate linear equality constraints for portfolio optimization based on weight bounds.
+
+    This function produces a list of constraint dictionaries compatible with SciPy optimizers.
+    It handles both net-budget and gross-exposure constraints depending on the portfolio regime.
 
     Parameters
     ----------
-    bounds : tuple of two reals
+    bounds : tuple of float
         Weight bounds in the format (min, max).
     constraint_type : int, optional
-        Type of constraint:
-            - 1: Sum over all weights.
-            - 2: Sum over all weights except the last one.
+        Determines which weights to sum over:
+            - 1: all weights
+            - 2: all weights except the last one
+        Default is 1.
 
     Returns
     -------
-    function
-        A function `f(x)` that computes the constrained sum of weights, adjusted by a shift depending on bounds.
+    list of dict
+        Each dict represents a single equality constraint in the form required by SciPy's
+        `minimize` function: {'type': 'eq', 'fun': callable}.
 
     Notes
     -----
-    - The `shift` is determined as:
-        - 0 if bounds span negative to positive,
-        - 1 if all bounds are negative,
-        - -1 otherwise.
+    - If bounds span negative to positive (long–short), a **gross exposure** constraint
+      (`sum(abs(weights)) = 1`) is added.
+    - For fully long or fully short portfolios, a **net exposure** constraint
+      (`sum(weights) = ±1`) is applied with a `shift` determined by bounds:
+        - 0 for long–short
+        - 1 for short-only
+        - -1 for long-only
+    - `constraint_type` controls whether the last weight is included in the sum,
+      which can be useful for sequential optimization or pivoted variables.
     """
+    constraint_list = []
     if bounds[0] < 0 and bounds[1] > 0:
         shift = 0
+        # Setting Gross exposure to 1
+        constraint_list.append({'type': 'eq', 'fun': lambda x: np.abs(x).sum() - 1})
     elif bounds[1] < 0:
         shift = 1
     else:
         shift = -1
     slicer = slice(None) if constraint_type == 1 else slice(None, -1)
-    return lambda x: x[slicer].sum() + shift
+    constraint_list.append({'type': 'eq', 'fun': lambda x: x[slicer].sum() + shift})
+    return constraint_list
 
 # Slippage function
 def slippage(weights, returns, cost, numpy_seed=None):
@@ -228,8 +250,7 @@ def slippage(weights, returns, cost, numpy_seed=None):
     for i in range(1, len(weights)):
         w_current = weights[i]
         w_prev = weights[i-1]
-        w_realized = w_prev * (1 + returns[i])
-        w_realized /= w_realized.sum()
+        w_realized = (w_prev * (1 + returns[i])) / (1 + np.sum(w_prev * returns[i]))
         turnover = np.sum(np.abs(w_current - w_realized))
         turnover_array[i] = turnover
     # Deciding slippage model using cost key

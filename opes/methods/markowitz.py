@@ -66,7 +66,7 @@ class MaxMean(Optimizer):
         # Optimization objective and results
         def f(w):
             return -(self.mean @ w - self.strength * self.reg(w))
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
             return self.weights
@@ -153,7 +153,7 @@ class MinVariance(Optimizer):
         # Optimization objective and results
         def f(w):
             return w @ self.covariance @ w + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
             return self.weights
@@ -246,7 +246,7 @@ class MeanVariance(Optimizer):
         # Optimization objective and results
         def f(w):
             return -self.mean @ w + (self.risk_aversion / 2) *(w @ self.covariance @ w) + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
             return self.weights
@@ -339,7 +339,7 @@ class MaxSharpe(Optimizer):
         # Optimization objective and results
         def f(w):
             return - ((self.mean @ w - self.risk_free) /  max(np.sqrt((w @ self.covariance @ w)), 1e-10) - self.strength * self.reg(w))
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
             return self.weights

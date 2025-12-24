@@ -55,9 +55,12 @@ OPES provides a plethora of quantitative portfolio optimizers with a comprehensi
 - Compound Poisson-Lognormal
 
 ### Regularization Schemes
+- L1
 - L2
 - Entropy
 - Maximum Weight
+- Weight Variance
+- Gini Coefficient
 
 ### Backtest Metrics
  - Sharpe Ratio
@@ -73,6 +76,14 @@ OPES provides a plethora of quantitative portfolio optimizers with a comprehensi
  - Skew
  - Kurtosis
  - Omega Ratio
+
+### Portfolio Metrics
+- Tickers
+- Weights
+- Portfolio Entropy
+- Herfindahl Index
+- Gini Coefficient
+- Absolute Maximum Weight
 
 ## Installation
 

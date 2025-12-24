@@ -65,7 +65,7 @@ class Kelly(Optimizer):
         def f(w):
             X = self.fraction * np.maximum((trimmed_return_data @ w), -0.99)
             return -np.mean(np.log(1 + X)) + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
             return self.weights
@@ -143,7 +143,7 @@ class QuadraticUtility(Optimizer):
         def f(w):
             X = 1 + np.maximum((trimmed_return_data @ w), -1)
             return np.mean(self.risk_aversion/2 * (X ** 2) - X) + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
             return self.weights
@@ -221,7 +221,7 @@ class CARA(Optimizer):
         def f(w):
             X = np.maximum((trimmed_return_data @ w), -1)
             return np.mean(np.exp( - self.risk_aversion * X)) + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
             return self.weights
@@ -303,7 +303,7 @@ class CRRA(Optimizer):
         def f(w):
             X = np.maximum((trimmed_return_data @ w), -0.99)
             return -np.mean((1 + X) ** (1-self.risk_aversion)) / (1-self.risk_aversion) + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
             return self.weights
@@ -391,7 +391,7 @@ class HARA(Optimizer):
         def f(w):
             X = np.maximum((trimmed_return_data @ w), -0.99)
             return - np.mean((self.scale * (1 + X) + self.shift) ** (1-self.risk_aversion)) / (1 - self.risk_aversion) + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
             return self.weights

@@ -67,7 +67,7 @@ class DistributionallyRobustMaxMean(Optimizer):
             # Utilize the log-sum-exp tecnique to ensure numerical stability
             m = np.max(X)
             return dual_var * self.radius + dual_var * (m + np.log(np.mean(np.exp(X - m))))
-        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(self.weights) + [(1e-3, None)], constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(self.weights) + [(1e-3, None)], constraints=constraint)
         if result.success:
             self.weights = result.x[:-1]
             return self.weights
@@ -134,7 +134,7 @@ class DistributionallyRobustKelly(Optimizer):
             w, dual_var = x[:-1], x[-1]
             E = np.mean(np.maximum((1 + self.fraction * (trimmed_return_data @ w)), 0.001) ** (-1 / dual_var))
             return dual_var * self.radius + dual_var * np.log(E)
-        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(self.weights) + [(1e-3, None)], constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, param_array, method='SLSQP', bounds=[weight_bounds]*len(self.weights) + [(1e-3, None)], constraints=constraint)
         if result.success:
             self.weights = result.x[:-1]
             return self.weights

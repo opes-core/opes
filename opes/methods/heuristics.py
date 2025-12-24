@@ -212,7 +212,7 @@ class MaxDiversification(Optimizer):
             var = w @ self.covariance @ w
             weightvol = w @ self.volarray
             return -(weightvol / np.sqrt(var)) + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
             return self.weights
@@ -302,7 +302,7 @@ class RiskParity(Optimizer):
             risk_contribution = w * (self.covariance @ w) / portfolio_volatility
             target_contribution = portfolio_volatility / len(w)
             return np.sum((risk_contribution - target_contribution)**2) + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
             return self.weights
@@ -396,7 +396,7 @@ class REPO(Optimizer):
             mean_term = self.mean @ w
             entropy_term = -np.sum(probabilities * np.log(probabilities))
             return -mean_term + self.risk_aversion * entropy_term + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
             return self.weights
@@ -487,7 +487,7 @@ class DEPO(Optimizer):
             X = np.maximum(X, -0.99)
             kullback_leibler_penalty = np.sum(probabilities * np.log(probabilities / uniform_prob))
             return -np.mean(np.log(1 + X)) + self.risk_aversion * kullback_leibler_penalty + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints= [{'type':'eq','fun': constraint}])
+        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
             return self.weights

@@ -30,7 +30,7 @@ class Optimizer(ABC):
         """
         Calculates and returns portfolio concentration and diversification statistics.
 
-        Includes Portfolio Entropy, Herfindahl Index, and maximum weight allocation.
+        Includes Portfolio Entropy, Herfindahl Index, Gini Coefficient and maximum weight allocation.
 
         :return: Dictionary containing tickers, weights, and concentration metrics.
         :raises PortfolioError: If weights have not been calculated via optimization.
@@ -40,12 +40,14 @@ class Optimizer(ABC):
         else:
             portfolio_entropy = -np.sum(np.abs(self.weights) * np.log(np.abs(self.weights) + 1e-12))
             herfindahl_index = np.sum(self.weights ** 2)
+            gini_coeff = np.mean(np.abs(self.weights[:, None] - self.weights[None, :]))
             max_weight = np.max(np.abs(self.weights))
             statistics = {
                 "Tickers": self.tickers, 
                 "Weights": np.round(self.weights, 5), 
                 "Portfolio Entropy": portfolio_entropy, 
                 "Herfindahl Index": herfindahl_index,
+                "Gini Coefficient": gini_coeff,
                 "Absolute Max Weight" : max_weight
             }
             return statistics

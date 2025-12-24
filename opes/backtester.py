@@ -1,5 +1,6 @@
 from numbers import Real
 import time 
+import inspect
 
 import numpy as np
 import pandas as pd
@@ -51,19 +52,31 @@ class Backtester():
             raise PortfolioError(f"Invalid jump cost model parameter length. Expected 3, got {len(self.cost[first_key])}")
             
 
-    def backtest(self, optimizer, rebalance_freq=None, seed=None):
+    def backtest(self, optimizer, rebalance_freq=None, seed=None, weight_bounds=None):
         # Running backtester integrity checks
         self.backtest_integrity_check(optimizer, rebalance_freq, seed)
         # Backtest loop
         test_data = extract_trim(self.test)[1]
         # Static weight backtest
         if rebalance_freq is None:
-            weights = optimizer.optimize(self.train)
+            if weight_bounds is not None:
+                if "weight_bounds" in inspect.signature(optimizer.optimize).parameters:
+                    weights = optimizer.optimize(self.train, weight_bounds=weight_bounds)
+                else:
+                    raise DataError(f"Given portfolio strategy does not accept weight bounds")
+            else:
+                weights = optimizer.optimize(self.train)
             weights_array = np.tile(weights, (len(test_data), 1))
         # Rolling weight backtest
         if rebalance_freq is not None:
             weights = [None] * len(test_data)
-            temp_weights = optimizer.optimize(self.train)
+            if weight_bounds is not None:
+                if "weight_bounds" in inspect.signature(optimizer.optimize).parameters:
+                    temp_weights = optimizer.optimize(self.train, weight_bounds=weight_bounds)
+                else:
+                    raise DataError(f"Given portfolio strategy does not accept weight bounds")
+            else:
+                temp_weights = optimizer.optimize(self.train)
             weights[0] = temp_weights
             for t in range(1, len(test_data)):
                 if t % rebalance_freq == 0:
@@ -72,7 +85,13 @@ class Backtester():
                     # Training data is pre-cleaned (no NaNs), test data up to t is also NaN-free
                     # Concatenating them preserves this property; dropna() handles edge cases safely
                     # The optimizer therefore only sees information available until the current decision point
-                    temp_weights = optimizer.optimize(pd.concat([self.train, self.test.iloc[0:t]]).dropna(), w=temp_weights)
+                    if weight_bounds is not None:
+                        if "weight_bounds" in inspect.signature(optimizer.optimize).parameters:
+                            temp_weights = optimizer.optimize(pd.concat([self.train, self.test.iloc[0:t]]).dropna(), w=temp_weights, weight_bounds=weight_bounds)
+                        else:
+                            raise DataError(f"Given portfolio strategy does not accept weight bounds")
+                    else:
+                        temp_weights = optimizer.optimize(pd.concat([self.train, self.test.iloc[0:t]]).dropna(), w=temp_weights)
                 weights[t] = temp_weights
             weights_array = np.vstack(weights)
         portfolio_returns = np.einsum('ij,ij->i', weights_array, test_data)
