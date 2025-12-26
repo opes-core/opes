@@ -40,7 +40,7 @@ class Optimizer(ABC):
         else:
             portfolio_entropy = -np.sum(np.abs(self.weights) * np.log(np.abs(self.weights) + 1e-12))
             herfindahl_index = np.sum(self.weights ** 2)
-            gini_coeff = np.mean(np.abs(self.weights[:, None] - self.weights[None, :]))
+            gini_coeff = np.mean(np.abs(self.weights[:, None] - self.weights[None, :])) / (2 * np.mean(np.abs(self.weights)))
             max_weight = np.max(np.abs(self.weights))
             statistics = {
                 "Tickers": self.tickers, 

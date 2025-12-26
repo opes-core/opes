@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opes"
-version = "0.4.0"
-description = "Open-source Python module for portfolio management with a plethora of portfolio schemes, stochastic backtesting and comprehensive metrics"
+version = "0.4.1"
+description = "Open-source Python module for portfolio management with a plethora of portfolio schemes, stochastic backtesting and comprehensive metrics."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -13,7 +13,8 @@ authors = [{name = "Nitin Tony Paul", email = "nitintonypaul@gmail.com"}]
 dependencies = [
     "numpy>=2.2.6,<3.0",
     "pandas>=2.3.3,<3.0",
-    "scipy>=1.15.2,<2.0"
+    "scipy>=1.15.2,<2.0",
+    "matplotlib>=3.10.1,<4.0"
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
