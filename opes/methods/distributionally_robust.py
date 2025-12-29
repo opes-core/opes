@@ -6,9 +6,9 @@ from opes.methods.base_optimizer import Optimizer
 from ..utils import extract_trim, test_integrity, find_constraint
 from ..errors import OptimizationError, PortfolioError
 
-class DistributionallyRobustMaxMean(Optimizer):
+class KLRobustMaxMean(Optimizer):
     """
-    Distributionally Robust Maximum Mean Optimizer.
+    Distributionally Robust Maximum Mean Optimizer (Kullback-Leibler Ambiguity).
 
     Optimizes the expected return under the worst-case probability distribution 
     within a KL-divergence uncertainty ball (radius) around the empirical distribution.
@@ -74,9 +74,9 @@ class DistributionallyRobustMaxMean(Optimizer):
         else:
             raise OptimizationError(f"Distributionally robust maximum mean optimization failed: {result.message}")
 
-class DistributionallyRobustKelly(Optimizer):
+class KLRobustKelly(Optimizer):
     """
-    Distributionally Robust Kelly Criterion Optimizer.
+    Distributionally Robust Kelly Criterion Optimizer (Kullback-Leibler Ambiguity).
 
     Maximizes the expected logarithmic wealth under the worst-case probability 
     distribution within a specified KL-divergence radius.

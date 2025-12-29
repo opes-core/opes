@@ -75,10 +75,7 @@ class BCRP(Optimizer):
 
         :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
         :param strength: Scalar multiplier for the regularization penalty.
-        :raises PortfolioError: If no regularizer is provided.
         """
-        if reg is None:
-            raise PortfolioError("Regularizer not specified")
         self.reg = find_regularizer(reg)
         self.strength = strength
 

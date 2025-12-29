@@ -1,10 +1,12 @@
-# $\Theta \text{PES}$
+# OPES
 
 An open-source Python library for advanced portfolio optimization and backtesting.
 
 ## Overview
 
 OPES provides a plethora of quantitative portfolio optimizers with a comprehensive backtesting engine. Test strategies against historical data with configurable slippage costs.
+
+---
 
 ## Key Features
 
@@ -37,7 +39,7 @@ OPES provides a plethora of quantitative portfolio optimizers with a comprehensi
 - Mean-CVaR
 - Entropic Value at Risk
 - Mean-EVaR
-- Entropic Risk Metric
+- Entropic Risk Measure
 
 #### Online Learning
 - BCRP with weight regularization (FTL/FTRL support)
@@ -68,9 +70,7 @@ OPES provides a plethora of quantitative portfolio optimizers with a comprehensi
  - Volatility
  - Average Return
  - Total Return
- - CAGR
  - Maximum Drawdown
- - Calmar Ratio
  - Value at Risk 95
  - Conditional Value at Risk 95
  - Skew
@@ -85,11 +85,15 @@ OPES provides a plethora of quantitative portfolio optimizers with a comprehensi
 - Gini Coefficient
 - Absolute Maximum Weight
 
+---
+
 ## Installation
 
 ```python
 pip install opes
 ```
+
+---
 
 ## Disclaimer
 

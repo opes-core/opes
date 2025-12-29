@@ -78,10 +78,7 @@ class Kelly(Optimizer):
 
         :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
         :param strength: Scalar multiplier for the regularization penalty.
-        :raises PortfolioError: If no regularizer is provided.
         """
-        if reg is None:
-            raise PortfolioError("Regularizer not specified")
         self.reg = find_regularizer(reg)
         self.strength = strength
 
@@ -156,10 +153,7 @@ class QuadraticUtility(Optimizer):
 
         :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
         :param strength: Scalar multiplier for the regularization penalty.
-        :raises PortfolioError: If no regularizer is provided.
         """
-        if reg is None:
-            raise PortfolioError("Regularizer not specified")
         self.reg = find_regularizer(reg)
         self.strength = strength
 
@@ -167,7 +161,7 @@ class CARA(Optimizer):
     """
     Optimizer based on Constant Absolute Risk Aversion (CARA).
 
-    Maximizes Exponential Utility: U(r) = -E[exp(-γ * r)], where γ is the 
+    Maximizes Exponential Utility: U(r) = -E[exp(-γ * r)] / γ, where γ is the 
     coefficient of absolute risk aversion.
     """
     def __init__(self, risk_aversion=1, reg=None, strength=1):
@@ -199,6 +193,10 @@ class CARA(Optimizer):
         self.tickers, data = extract_trim(data)
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
 
+        # Quick checking risk aversion validity
+        if self.risk_aversion <= 0:
+            raise PortfolioError(f"Invalid risk aversion. Expected within bounds (0, inf), got {self.risk_aversion}")
+        
         # Functions to test data integrity and find optimization constraint
         test_integrity(tickers=self.tickers, weights=self.weights, bounds=weight_bounds)
         return data
@@ -220,7 +218,7 @@ class CARA(Optimizer):
         # Optimization objective and results
         def f(w):
             X = np.maximum((trimmed_return_data @ w), -1)
-            return np.mean(np.exp( - self.risk_aversion * X)) + self.strength * self.reg(w)
+            return (1 / self.risk_aversion) * np.mean(np.exp( - self.risk_aversion * X)) + self.strength * self.reg(w)
         result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
@@ -234,10 +232,7 @@ class CARA(Optimizer):
 
         :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
         :param strength: Scalar multiplier for the regularization penalty.
-        :raises PortfolioError: If no regularizer is provided.
         """
-        if reg is None:
-            raise PortfolioError("Regularizer not specified")
         self.reg = find_regularizer(reg)
         self.strength = strength
 
@@ -316,10 +311,7 @@ class CRRA(Optimizer):
 
         :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
         :param strength: Scalar multiplier for the regularization penalty.
-        :raises PortfolioError: If no regularizer is provided.
         """
-        if reg is None:
-            raise PortfolioError("Regularizer not specified")
         self.reg = find_regularizer(reg)
         self.strength = strength
 
@@ -390,7 +382,7 @@ class HARA(Optimizer):
         # Optimization objective and results
         def f(w):
             X = np.maximum((trimmed_return_data @ w), -0.99)
-            return - np.mean((self.scale * (1 + X) + self.shift) ** (1-self.risk_aversion)) / (1 - self.risk_aversion) + self.strength * self.reg(w)
+            return (self. risk_aversion - 1) * np.mean((self.scale * (1 + X) / (1 - self.risk_aversion) + self.shift) ** (self.risk_aversion)) / (self.risk_aversion) + self.strength * self.reg(w)
         result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
         if result.success:
             self.weights = result.x
@@ -404,9 +396,6 @@ class HARA(Optimizer):
 
         :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
         :param strength: Scalar multiplier for the regularization penalty.
-        :raises PortfolioError: If no regularizer is provided.
         """
-        if reg is None:
-            raise PortfolioError("Regularizer not specified")
         self.reg = find_regularizer(reg)
         self.strength = strength

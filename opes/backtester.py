@@ -62,11 +62,12 @@ class Backtester():
             cleanweights (True or False): Filters infinitesmal weights and renormalizes
 
         Raises:
-            DataError: If the training data length is insufficient for backtesting.
+            DataError: If the training data length is insufficient for backtesting, or if the format doesn't match.
             PortfolioError: If the optimizer object, rebalance frequency, seed, or cost model is invalid.
 
         Validation checks include:
             - Training data length (minimum 5 rows, non-empty)
+            - Training and test data format match
             - Optimizer object type and attribute presence
             - Rebalance frequency type and positivity
             - Random seed type
@@ -74,11 +75,13 @@ class Backtester():
                 * 'const': single real number
                 * 'lognormal', 'gamma', 'inversegaussian': tuple/list of length 2
         """
-        # Checking train and test data length
+        # Checking train and test data length and format
         if len(self.train) < 5:
             raise DataError(f"Insufficient training data for backtest. Expected len(data) >= 5, got {len(self.train)}")
         if len(self.train) <= 0:
             raise DataError(f"Insufficient training data for backtest. Expected len(data) > 0, got {len(self.train)}")
+        if not((self.train.columns.equals(self.test.columns))):
+            raise DataError("Train and test DataFrames have different formats")
         if cleanweights is not True and cleanweights is not False:
             raise DataError(f"Invalid cleanweights variable. Expected True or False, got {cleanweights}")
         # Checking optimizer validity
@@ -212,13 +215,11 @@ class Backtester():
 
         Returns:
             dict: Dictionary of performance metrics with the following keys:
-                - 'sharpe': Annualized Sharpe ratio.
-                - 'sortino': Annualized Sortino ratio.
-                - 'calmar': Calmar ratio (CAGR / max drawdown).
-                - 'volatility': Annualized standard deviation of returns (%).
+                - 'sharpe': Sharpe ratio.
+                - 'sortino': Sortino ratio.
+                - 'volatility': Standard deviation of returns (%).
                 - 'mean_return': Mean return (%).
                 - 'total_return': Total cumulative return (%).
-                - 'cagr': Compound annual growth rate (%).
                 - 'max_drawdown': Maximum drawdown.
                 - 'var_95': Value at Risk at 95% confidence level.
                 - 'cvar_95': Conditional Value at Risk (expected shortfall) at 95%.
@@ -227,7 +228,6 @@ class Backtester():
                 - 'omega_0': Omega ratio (gain/loss ratio).
 
         Notes:
-            - Metrics are annualized assuming 252 trading days.
             - Volatility, mean, total return, and CAGR are scaled to percentages.
             - Tail risk metrics (VaR, CVaR) are based on the lower 5% of returns.
             - Returns should be cleaned (NaNs removed) before passing to this method.
@@ -239,14 +239,12 @@ class Backtester():
         vol = returns.std()
 
         # Performance metrics
-        SHARPE = np.sqrt(252) * average / vol if (vol > 0 and not np.isnan(vol)) else np.nan
-        SORTINO = np.sqrt(252) * average / downside_vol if (downside_vol > 0 and not np.isnan(downside_vol)) else np.nan
-        VOLATILITY = vol * np.sqrt(252) if (vol > 0 or not np.isnan(vol)) else np.nan
+        SHARPE = average / vol if (vol > 0 and not np.isnan(vol)) else np.nan
+        SORTINO = average / downside_vol if (downside_vol > 0 and not np.isnan(downside_vol)) else np.nan
+        VOLATILITY = vol if (vol > 0 or not np.isnan(vol)) else np.nan
         AVERAGE = average
         TOTAL = np.prod(1 + returns) - 1
-        CAGR = (1 + TOTAL) ** (252/len(returns)) - 1
         MAX_DD = np.max(1 - np.cumprod(1 + returns) / np.maximum.accumulate(np.cumprod(1 + returns)))
-        CALMAR = CAGR / abs(MAX_DD) if MAX_DD > 0 else np.nan
         VAR = -np.quantile(returns, 0.05)
         tail_returns = returns[returns <= -VAR]
         CVAR = -tail_returns.mean() if len(tail_returns) > 0 else np.nan
@@ -258,11 +256,9 @@ class Backtester():
         performance_metrics = [
             'sharpe',
             'sortino',
-            'calmar',
             'volatility',
             'mean_return',
             'total_return',
-            'cagr',
             'max_drawdown',
             'var_95',
             'cvar_95',
@@ -270,8 +266,8 @@ class Backtester():
             'kurtosis',
             'omega_0'
         ]
-        values = [VOLATILITY, AVERAGE, TOTAL, CAGR, MAX_DD, VAR, CVAR]
-        results = [round(SHARPE, 5), round(SORTINO, 5), round(CALMAR, 5)] + [round(x*100, 5) for x in values] + [round(SKEW, 5), round(KURTOSIS, 5), round(OMEGA, 5)]
+        values = [VOLATILITY, AVERAGE, TOTAL, MAX_DD, VAR, CVAR]
+        results = [round(SHARPE, 5), round(SORTINO, 5)] + [round(x*100, 5) for x in values] + [round(SKEW, 5), round(KURTOSIS, 5), round(OMEGA, 5)]
         return dict(zip(performance_metrics, results))
     
     def plot_wealth(self, returns_dict, initial_wealth=1.0, savefig=False):

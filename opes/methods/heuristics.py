@@ -121,6 +121,10 @@ class SoftmaxMean(Optimizer):
         # Extracting trimmed return data from OHLCV and obtaining tickers
         self.tickers, data = extract_trim(data)
 
+        # Quick check for temperature validity
+        if self.temperature <= 0:
+            raise PortfolioError(f"Invalid temperature. Expected within bounds (0, inf], got {self.temperature})")
+
         # Extracting mean and testing integrity
         self.mean = np.mean(data, axis=0) if custom_mean is None else custom_mean
         test_integrity(tickers=self.tickers, mean=self.mean)
@@ -225,10 +229,7 @@ class MaxDiversification(Optimizer):
 
         :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
         :param strength: Scalar multiplier for the regularization penalty.
-        :raises PortfolioError: If no regularizer is provided.
         """
-        if reg is None:
-            raise PortfolioError("Regularizer not specified")
         self.reg = find_regularizer(reg)
         self.strength = strength
 
@@ -315,10 +316,7 @@ class RiskParity(Optimizer):
 
         :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
         :param strength: Scalar multiplier for the regularization penalty.
-        :raises PortfolioError: If no regularizer is provided.
         """
-        if reg is None:
-            raise PortfolioError("Regularizer not specified")
         self.reg = find_regularizer(reg)
         self.strength = strength
 
@@ -409,10 +407,7 @@ class REPO(Optimizer):
 
         :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
         :param strength: Scalar multiplier for the regularization penalty.
-        :raises PortfolioError: If no regularizer is provided.
         """
-        if reg is None:
-            raise PortfolioError("Regularizer not specified")
         self.reg = find_regularizer(reg)
         self.strength = strength
 
@@ -500,9 +495,6 @@ class DEPO(Optimizer):
 
         :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
         :param strength: Scalar multiplier for the regularization penalty.
-        :raises PortfolioError: If no regularizer is provided.
         """
-        if reg is None:
-            raise PortfolioError("Regularizer not specified")
         self.reg = find_regularizer(reg)
         self.strength = strength

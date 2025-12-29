@@ -19,7 +19,7 @@ def find_regularizer(reg):
             - "maxweight": Maximum weight regularization, returns the largest absolute weight.
             - "entropy": Entropy regularization, returns the sum of |w| * log(|w| + 1e-12) for numerical stability.
             - "variance": Variance regularization, returns the variance of the weights to encourage balanced allocations; returns 0 for a single weight.
-            - "gini": Gini regularization, returns the mean absolute pairwise difference between weights to penalize concentration and encourage balance.
+            - "MPAD": Mean Absolute Pairwise Deviation regularization, returns the mean absolute pairwise difference between weights to encourage balance.
 
     Returns
     -------
@@ -51,99 +51,6 @@ def all_elements_are_type(sequence, target):
     """Check if all elements in a sequence are of the specified type."""
     return all(isinstance(i, target) for i in sequence)
 
-# Data integrity checker
-def test_integrity(
-        tickers, 
-        weights=None, 
-        cov=None, 
-        mean=None,
-        bounds=None, 
-        kelly_fraction=None, 
-        confidence=None, 
-        volatility_array=None,
-        hist_bins=None,
-        uncertainty_radius=None
-    ):
-    """
-    Validate the integrity and consistency of input portfolio data.
-
-    Parameters
-    ----------
-    tickers : list
-        List of asset tickers.
-    weights : array-like, optional
-        Portfolio weights; must match the number of tickers.
-    cov : array-like, optional
-        Covariance matrix; must be square with size equal to number of tickers and invertible.
-    mean : array-like, optional
-        Expected returns vector; length must match number of tickers.
-    bounds : tuple of two reals, optional
-        Weight bounds in the format (min, max) with min < max.
-    kelly_fraction : float, optional
-        Fraction for Kelly criterion; must be in (0, 1].
-    confidence : float, optional
-        Confidence level for risk measures; must be in (0, 1).
-    volatility_array : array-like, optional
-        Asset volatilities; length must match number of tickers and all values > 0.
-    hist_bins : int, optional
-        Number of histogram bins; must be a positive integer.
-    uncertainty_radius : float, optional
-        Radius for uncertainty sets; must be positive.
-
-    Raises
-    ------
-    DataError
-        If any vector/matrix has incorrect type, length, or shape, or contains invalid values.
-    PortfolioError
-        If any portfolio-specific parameter (kelly_fraction, confidence, uncertainty_radius) is out of bounds.
-    """
-    asset_quantity = len(tickers)
-    if mean is not None:
-        if not all_elements_are_type(np.array(mean).flatten(), Real):
-            raise DataError(f"Mean vector type mismatch. Expected real numbers")
-        if len(mean) != asset_quantity:
-            raise DataError(f"Mean vector shape mismatch. Expected {asset_quantity}, got {len(mean)}")
-    if cov is not None:
-        if not all_elements_are_type(np.array(cov).flatten(), Real):
-            raise DataError(f"Covariance Matrix type mismatch. Expected real numbers")
-        if asset_quantity != cov.shape[0] or (cov.shape[0] != cov.shape[1]):
-            raise DataError(f"Covariance matrix shape mismatch. Expected ({asset_quantity}, {asset_quantity}), got {cov.shape}")
-        try:
-            np.linalg.inv(cov)
-        except np.linal.LinAlgError:
-            raise DataError(f"Singular covariance matrix")
-    if weights is not None:
-        if not all_elements_are_type(np.array(weights).flatten(), Real):
-            raise DataError("Weights vector type mismatch. Expected real numbers")
-        if len(weights) != asset_quantity:
-            raise DataError(f"Weight vector shape mismatch. Expected {asset_quantity}, got {len(weights)}")
-    if bounds is not None:
-        if not isinstance(bounds, tuple):
-            raise DataError(f"Invalid bounds sequence type. Expected tuple, got {type(bounds)}")
-        if len(bounds) != 2:
-            raise DataError(f"Invalid weight bounds length. Expected 2, got {len(bounds)}")
-        if not isinstance(bounds[0], Real) or not isinstance(bounds[1], Real):
-            raise DataError(f"Invalid bounds type. Expected (real, real), got ({type(bounds[0])},{type(bounds[1])})")
-        if bounds[0] >= bounds[1]:
-            raise DataError(f"Invalid weight bounds. Bounds must be of the format (start, end) with start < end")
-    if kelly_fraction is not None:
-        if not isinstance(kelly_fraction, Real) or kelly_fraction <= 0 or kelly_fraction > 1:
-            raise PortfolioError(f"Invalid Kelly criterion fraction. Must be bounded within (0,1], got {kelly_fraction}")
-    if confidence is not None:
-        if not isinstance(confidence, Real) or confidence <=0 or confidence >= 1:
-            raise PortfolioError(f"Invalid confidence value. Must be bounded within (0,1), got {confidence}")
-    if volatility_array is not None:
-        if len(volatility_array) != asset_quantity:
-            raise DataError(f"Volatility array length mismatch. Expected {len(tickers)}, got {len(volatility_array)}")
-        if (volatility_array <= 0).any():
-            raise DataError(f"Invalid volatility values: volatility array must contain strictly positive values.")
-    if hist_bins is not None:
-        if not isinstance(hist_bins, Integer) or hist_bins <= 0:
-            raise DataError(f"Invalid histogram bins. Expected integer within bounds [1, inf], got {hist_bins}")
-    if uncertainty_radius is not None:
-        if not isinstance(uncertainty_radius, Real) or uncertainty_radius <= 0:
-            raise PortfolioError(f"Invalid uncertainty set radius given. Expected real number within bounds (0, inf), got {uncertainty_radius}")
-
 # Extract and trim data for optimizers and backtesting engine. Returns tickers and returns
 def extract_trim(data):
     """
@@ -165,10 +72,21 @@ def extract_trim(data):
     ------
     DataError
         If `data` is None.
+        If 'Close' is not present within data
     """
     if data is None:
         raise DataError("Data not specified")
-    returnMatrix = data.xs('Close', axis=1, level=1).pct_change(fill_method=None).dropna().values.tolist()
+    # Check if columns have a MultiIndex
+    if isinstance(data.columns, pd.MultiIndex):
+        # If the columns have a MultiIndex then Close must be one of those indices
+        if 'Close' in data.columns.get_level_values(1):
+            returnMatrix = data.xs('Close', axis=1, level=1).pct_change(fill_method=None).dropna().values.tolist()
+        else:
+            raise DataError("MultiIndex DataFrame detected, but level 1 does not contain a 'Close' column.")
+    # If the column is single index, then the column is assumed to be close prices
+    else:
+        returnMatrix = data.pct_change(fill_method=None).dropna().values.tolist()
+    # Obtaining tickers & truncating data to match column length without nans
     min_len = min(len(r) for r in returnMatrix)
     tickers = data.columns.get_level_values(0).unique().tolist()
     return tickers, np.array([r[-min_len:] for r in returnMatrix])
@@ -213,6 +131,7 @@ def find_constraint(bounds, constraint_type=1):
     if bounds[0] < 0 and bounds[1] > 0:
         shift = 0
         # Setting Gross exposure to 1
+        # Makes objective non-convex in general
         constraint_list.append({'type': 'eq', 'fun': lambda x: np.abs(x).sum() - 1})
     elif bounds[1] < 0:
         shift = 1
@@ -275,3 +194,98 @@ def slippage(weights, returns, cost, numpy_seed=None):
         jump_cost = np.array([np.sum(numpy_rng.lognormal(mean=cost_params[1], sigma=cost_params[2], size=n)) if n > 0 else 0 for n in N])
         return turnover_array * jump_cost / 10000
     raise DataError(f"Unknown cost model: {cost_key}")
+
+# Data integrity checker
+def test_integrity(
+        tickers, 
+        weights=None, 
+        cov=None, 
+        mean=None,
+        bounds=None, 
+        kelly_fraction=None, 
+        confidence=None, 
+        volatility_array=None,
+        hist_bins=None,
+        uncertainty_radius=None
+    ):
+    """
+    Validate the integrity and consistency of input portfolio data.
+
+    Parameters
+    ----------
+    tickers : list
+        List of asset tickers.
+    weights : array-like, optional
+        Portfolio weights; must match the number of tickers.
+    cov : array-like, optional
+        Covariance matrix; must be square with size equal to number of tickers and invertible.
+    mean : array-like, optional
+        Expected returns vector; length must match number of tickers.
+    bounds : tuple of two reals, optional
+        Weight bounds in the format (min, max) with min < max and abs(max), abs(min) <= 1.
+    kelly_fraction : float, optional
+        Fraction for Kelly criterion; must be in (0, 1].
+    confidence : float, optional
+        Confidence level for risk measures; must be in (0, 1).
+    volatility_array : array-like, optional
+        Asset volatilities; length must match number of tickers and all values > 0.
+    hist_bins : int, optional
+        Number of histogram bins; must be a positive integer.
+    uncertainty_radius : float, optional
+        Radius for uncertainty sets; must be positive.
+
+    Raises
+    ------
+    DataError
+        If any vector/matrix has incorrect type, length, or shape, or contains invalid values.
+    PortfolioError
+        If any portfolio-specific parameter (kelly_fraction, confidence, uncertainty_radius) is out of bounds.
+    """
+    asset_quantity = len(tickers)
+    if mean is not None:
+        if not all_elements_are_type(np.array(mean).flatten(), Real):
+            raise DataError(f"Mean vector type mismatch. Expected real numbers")
+        if len(mean) != asset_quantity:
+            raise DataError(f"Mean vector shape mismatch. Expected {asset_quantity}, got {len(mean)}")
+    if cov is not None:
+        if not all_elements_are_type(np.array(cov).flatten(), Real):
+            raise DataError(f"Covariance Matrix type mismatch. Expected real numbers")
+        if asset_quantity != cov.shape[0] or (cov.shape[0] != cov.shape[1]):
+            raise DataError(f"Covariance matrix shape mismatch. Expected ({asset_quantity}, {asset_quantity}), got {cov.shape}")
+        try:
+            np.linalg.inv(cov)
+        except np.linal.LinAlgError:
+            raise DataError(f"Singular covariance matrix")
+    if weights is not None:
+        if not all_elements_are_type(np.array(weights).flatten(), Real):
+            raise DataError("Weights vector type mismatch. Expected real numbers")
+        if len(weights) != asset_quantity:
+            raise DataError(f"Weight vector shape mismatch. Expected {asset_quantity}, got {len(weights)}")
+    if bounds is not None:
+        if not isinstance(bounds, tuple):
+            raise DataError(f"Invalid bounds sequence type. Expected tuple, got {type(bounds)}")
+        if len(bounds) != 2:
+            raise DataError(f"Invalid weight bounds length. Expected 2, got {len(bounds)}")
+        if not isinstance(bounds[0], Real) or not isinstance(bounds[1], Real):
+            raise DataError(f"Invalid bounds type. Expected (real, real), got ({type(bounds[0])},{type(bounds[1])})")
+        if bounds[0] >= bounds[1]:
+            raise DataError(f"Invalid weight bounds. Bounds must be of the format (start, end) with start < end")
+        if abs(bounds[1]) > 1 or abs(bounds[0]) > 1:
+            raise DataError(f"Invalid weight bounds. Leverage not allowed, got ({bounds[0]}, {bounds[1]})")
+    if kelly_fraction is not None:
+        if not isinstance(kelly_fraction, Real) or kelly_fraction <= 0 or kelly_fraction > 1:
+            raise PortfolioError(f"Invalid Kelly criterion fraction. Must be bounded within (0,1], got {kelly_fraction}")
+    if confidence is not None:
+        if not isinstance(confidence, Real) or confidence <=0 or confidence >= 1:
+            raise PortfolioError(f"Invalid confidence value. Must be bounded within (0,1), got {confidence}")
+    if volatility_array is not None:
+        if len(volatility_array) != asset_quantity:
+            raise DataError(f"Volatility array length mismatch. Expected {len(tickers)}, got {len(volatility_array)}")
+        if (volatility_array <= 0).any():
+            raise DataError(f"Invalid volatility values: volatility array must contain strictly positive values.")
+    if hist_bins is not None:
+        if not isinstance(hist_bins, Integer) or hist_bins <= 0:
+            raise DataError(f"Invalid histogram bins. Expected integer within bounds [1, inf], got {hist_bins}")
+    if uncertainty_radius is not None:
+        if not isinstance(uncertainty_radius, Real) or uncertainty_radius <= 0:
+            raise PortfolioError(f"Invalid uncertainty set radius given. Expected real number within bounds (0, inf), got {uncertainty_radius}")
