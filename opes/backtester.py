@@ -118,6 +118,8 @@ class Backtester():
         This method performs either a static-weight backtest or a rolling-weight
         backtest depending on whether `rebalance_freq` is specified. It also
         applies transaction costs and ensures no lookahead bias during rebalancing.
+        For a rolling backtest, any common date values are dropped, the first occurrence
+        is considered to be original and kept.
 
         Args:
             optimizer: Portfolio optimizer object with an `optimize` method.
@@ -160,7 +162,7 @@ class Backtester():
             else:
                 weights = optimizer.optimize(self.train)
             if clean_weights:
-                weights = optimizer.clean_weights(weights)
+                weights = optimizer.clean_weights()
             weights_array = np.tile(weights, (len(test_data), 1))
         # Rolling weight backtest
         if rebalance_freq is not None:
@@ -173,7 +175,7 @@ class Backtester():
             else:
                 temp_weights = optimizer.optimize(self.train)
             if clean_weights:
-                temp_weights = optimizer.clean_weights(temp_weights)
+                temp_weights = optimizer.clean_weights()
             weights[0] = temp_weights
             for t in range(1, len(test_data)):
                 if t % rebalance_freq == 0:
@@ -184,11 +186,15 @@ class Backtester():
                     # The optimizer therefore only sees information available until the current decision point
                     if weight_bounds is not None:
                         if "weight_bounds" in inspect.signature(optimizer.optimize).parameters:
-                            temp_weights = optimizer.optimize(pd.concat([self.train, self.test.iloc[0:t]]).dropna(), w=temp_weights, weight_bounds=weight_bounds)
+                            combined_dataset = pd.concat([self.train, self.test.iloc[:t]])
+                            combined_dataset = combined_dataset[~combined_dataset.index.duplicated(keep="first")].dropna()
+                            temp_weights = optimizer.optimize(combined_dataset, w=temp_weights, weight_bounds=weight_bounds)
                         else:
                             raise DataError(f"Given portfolio strategy does not accept weight bounds")
                     else:
-                        temp_weights = optimizer.optimize(pd.concat([self.train, self.test.iloc[0:t]]).dropna(), w=temp_weights)
+                        combined_dataset = pd.concat([self.train, self.test.iloc[:t]])
+                        combined_dataset = combined_dataset[~combined_dataset.index.duplicated(keep="first")].dropna()
+                        temp_weights = optimizer.optimize(combined_dataset, w=temp_weights)
                     if clean_weights:
                         temp_weights = optimizer.clean_weights(temp_weights)
                 weights[t] = temp_weights

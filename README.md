@@ -59,7 +59,7 @@ OPES provides a plethora of quantitative portfolio optimizers with a comprehensi
 ### Regularization Schemes
 - L1
 - L2
-- L $\infty$
+- L-infinity
 - Entropy
 - Weight Variance
 - Mean Pairwise Absolute Deviation
