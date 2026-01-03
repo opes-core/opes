@@ -32,7 +32,6 @@ OPES provides a plethora of quantitative portfolio optimizers with a comprehensi
 - Softmax Mean
 - Maximum Diversification
 - Return Entropy Portfolio Optimization
-- Discrete Entropy Portfolio Optimization
 
 #### Risk Measures
 - Conditional Value at Risk
@@ -45,9 +44,10 @@ OPES provides a plethora of quantitative portfolio optimizers with a comprehensi
 - BCRP with weight regularization (FTL/FTRL support)
 - Exponential Gradient
 
-#### Distributionally Robust Optimization (Kullback-Leibler)
-- Distributionally Robust Maximum Mean
-- Distributionally Robust Kelly and Fractions
+#### Distributionally Robust Optimization
+- KL-Ambiguity Distributionally Robust Maximum Mean
+- KL-Ambiguity Distributionally Robust Kelly and Fractions
+- Wasserstein-Ambiguity Distributionally Robust Maximum Mean
 
 ### Slippage Models
 - Constant

@@ -35,7 +35,7 @@ def find_regularizer(reg):
         None: lambda w: 0,
         "l1": lambda w: np.sum(np.abs(w)),
         "l2": lambda w: np.sum(w ** 2),
-        "l-inf": lambda w: max(np.abs(w)),
+        "l-inf": lambda w: np.max(np.abs(w)),
         "entropy": lambda w: np.sum(np.abs(w) * np.log(np.abs(w) + 1e-12)),
         "variance": lambda w: np.var(w) if len(w) >= 2 else 0,
         "mpad": lambda w: np.mean(np.abs(w[:, None] - w[None, :]))
