@@ -8,7 +8,8 @@ An Open-source Portfolio Estimation System for advanced portfolio optimization a
 
 OPES provides a plethora of quantitative portfolio optimizers with a comprehensive backtesting engine. Test strategies against historical data with configurable slippage costs.
 
-For a quick documentation on this module, visit [opes-documentation](https://github.com/orgs/opes-core/opes-documentation)
+For a quick documentation on this module, visit [opes-documentation](https://github.com/opes-core/opes-documentation)
+
 For a detailed guide on this module, visit [opes-book.vercel.app](https://opes-book.vercel.app)
 
 ---
