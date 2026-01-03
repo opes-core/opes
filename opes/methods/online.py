@@ -60,7 +60,7 @@ class BCRP(Optimizer):
         
         # Optimization objective and results
         def f(w):
-            X = np.prod((1 + trimmed_return_data) @ w)
+            X = np.prod(1 + np.maximum(trimmed_return_data, -0.95) @ w)
             return -X + self.strength * self.reg(w)
         result = minimize(f, w, method='SLSQP', bounds=[(0,1)]*len(w), constraints=constraint)
         if result.success:
