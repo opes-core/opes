@@ -6,6 +6,9 @@ from opes.methods.base_optimizer import Optimizer
 from ..utils import extract_trim, find_regularizer, test_integrity, find_constraint
 from ..errors import OptimizationError, PortfolioError
 
+# Small epsilon value for numerical stability
+EPSILON = 1e-8
+
 class BCRP(Optimizer):
     """
     Best Constant Rebalanced Portfolio (BCRP) optimizer.
@@ -128,16 +131,21 @@ class ExponentialGradient(Optimizer):
         :return: The newly updated weight vector.
         """
         # Preparing optimization and finding constraint
-        # EG uses weight update method, so it takes the most recent return and uses it to update
-        recent_return = self.prepare_inputs(data, w)[-1]
+        # EG uses weight update method, so it takes the most recent (gross) return and uses it to update weights
+        recent_return = self.prepare_inputs(data, w)[-1] + 1.0
         portfolio_return = recent_return @ self.weights
+
+        # Capping to small epsilon value for numerical stability
+        # Assets like GME (2021) can return huge negative values
+        if portfolio_return < EPSILON:
+            portfolio_return = EPSILON
 
         # Exponential Gradient update & normalization
         # We apply the log-sum-exp technique with subtracting the maximum to improve numerical stability
         # Weights are shift-invariant since they are exponentiated
-        log_w = np.log(self.weights) + self.learning_rate * recent_return / portfolio_return
+        log_w = np.log(self.weights + EPSILON) + self.learning_rate * recent_return / portfolio_return
         log_w -= log_w.max()
         new_weights = np.exp(log_w)
-        new_weights /= new_weights.sum()
+        self.weights = new_weights / new_weights.sum()
 
         return self.weights

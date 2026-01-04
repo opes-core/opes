@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opes"
-version = "0.5.1"
-description = "Open-source Python module for portfolio management with a plethora of portfolio schemes, stochastic backtesting and comprehensive metrics."
+version = "0.5.2"
+description = "A Research-focused portfolio optimization and backtesting engine."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -27,3 +27,5 @@ classifiers = [
 
 [project.urls]
 repository = "https://github.com/opes-core/opes"
+documentation = "https://github.com/opes-core/opes-documentation"
+book = "https://opes.pages.dev"

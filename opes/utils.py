@@ -60,6 +60,7 @@ def extract_trim(data):
     ----------
     data : pandas.DataFrame
         Multi-index DataFrame with tickers as the first level and OHLCV columns as the second level. Must contain 'Close' prices.
+        Single-index DataFrame with tickers as the first level and per-day prices.
 
     Returns
     -------
@@ -87,8 +88,8 @@ def extract_trim(data):
     else:
         returnMatrix = data.pct_change(fill_method=None).dropna().values.tolist()
     # Obtaining tickers & truncating data to match column length without nans
-    min_len = min(len(r) for r in returnMatrix)
     tickers = data.columns.get_level_values(0).unique().tolist()
+    min_len = min(len(r) for r in returnMatrix)
     return tickers, np.array([r[-min_len:] for r in returnMatrix])
 
 # Optimization constraints finding function
@@ -117,11 +118,11 @@ def find_constraint(bounds, constraint_type=1):
 
     Notes
     -----
-    - If bounds span negative to positive (long–short), a **gross exposure** constraint
+    - If bounds span negative to positive (long-short), a **gross exposure** constraint
       (`sum(abs(weights)) = 1`) is added.
     - For fully long or fully short portfolios, a **net exposure** constraint
       (`sum(weights) = ±1`) is applied with a `shift` determined by bounds:
-        - 0 for long–short
+        - 0 for long-short
         - 1 for short-only
         - -1 for long-only
     - `constraint_type` controls whether the last weight is included in the sum,

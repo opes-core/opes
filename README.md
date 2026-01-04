@@ -6,11 +6,11 @@ An Open-source Portfolio Estimation System for advanced portfolio optimization a
 
 ## Overview
 
-OPES provides a plethora of quantitative portfolio optimizers with a comprehensive backtesting engine. Test strategies against historical data with configurable slippage costs.
+OPES is a comprehensive Python library for advanced portfolio optimization and backtesting. Designed for quantitative finance enthusiasts,  OPES provides a wide range of portfolio strategies, risk measures and robust evaluation tools.
 
-For a quick documentation on this module, visit [opes-documentation](https://github.com/opes-core/opes-documentation)
+Visit the [documentation](https://github.com/opes-core/opes-documentation) for quick insights.
 
-For a detailed guide on this module, visit [opes-book.vercel.app](https://opes-book.vercel.app)
+For a detailed guide on this module, visit the [guide](https://opes.pages.dev).
 
 ---
 
@@ -36,7 +36,7 @@ The information provided by OPES is for educational, research and informational 
 - Maximum Sharpe
 
 ### Principled Heuristics
-- 1/N
+- Uniform (1/N)
 - Risk Parity
 - Inverse Volatility
 - Softmax Mean

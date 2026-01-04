@@ -74,6 +74,7 @@ class Backtester():
             - Cost model structure and parameters:
                 * 'const': single real number
                 * 'lognormal', 'gamma', 'inversegaussian': tuple/list of length 2
+                * 'jump': tuple/list of length 3
         """
         # Checking train and test data length and format
         if len(self.train) < 5:
@@ -240,15 +241,14 @@ class Backtester():
         """
         # Caching repeated values
         returns = np.array(returns)
-        average = returns.mean()
         downside_vol = returns[returns < 0].std()
         vol = returns.std()
 
         # Performance metrics
-        SHARPE = average / vol if (vol > 0 and not np.isnan(vol)) else np.nan
-        SORTINO = average / downside_vol if (downside_vol > 0 and not np.isnan(downside_vol)) else np.nan
+        AVERAGE = returns.mean()
+        SHARPE = AVERAGE / vol if (vol > 0 and not np.isnan(vol)) else np.nan
+        SORTINO = AVERAGE / downside_vol if (downside_vol > 0 and not np.isnan(downside_vol)) else np.nan
         VOLATILITY = vol if (vol > 0 or not np.isnan(vol)) else np.nan
-        AVERAGE = average
         TOTAL = np.prod(1 + returns) - 1
         MAX_DD = np.max(1 - np.cumprod(1 + returns) / np.maximum.accumulate(np.cumprod(1 + returns)))
         VAR = -np.quantile(returns, 0.05)
