@@ -1,5 +1,5 @@
 from numbers import Real
-import time 
+import time
 import inspect
 
 import numpy as np
@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 from opes.errors import PortfolioError, DataError
 from opes.utils import slippage, extract_trim
 
-class Backtester():
+
+class Backtester:
     """
     A comprehensive backtesting engine for financial time series.
 
@@ -21,22 +22,23 @@ class Backtester():
     Attributes:
         train (pd.DataFrame): Training dataset with NaNs removed.
         test (pd.DataFrame): Testing dataset with NaNs removed.
-        cost (dict): Dictionary specifying transaction cost parameters. 
+        cost (dict): Dictionary specifying transaction cost parameters.
                      Defaults to {'const': 10.0}.
     """
-    def __init__(self, train_data=None, test_data=None, cost={'const': 10.0}):
+
+    def __init__(self, train_data=None, test_data=None, cost={"const": 10.0}):
         """
         Initializes the Backtester with optional training and testing data.
 
         Args:
-            train_data (pd.DataFrame): Historical training data. 
+            train_data (pd.DataFrame): Historical training data.
                                                  Defaults to None.
-            test_data (pd.DataFrame): Historical testing data. 
+            test_data (pd.DataFrame): Historical testing data.
                                                 Defaults to None.
             cost (dict, optional): Transaction cost parameters. Defaults to {'const': 10.0}.
 
         Notes:
-            - NaN values in both train_data and test_data are automatically dropped 
+            - NaN values in both train_data and test_data are automatically dropped
               to prevent indexing errors during backtests.
             - The `cost` dictionary can be expanded to include other cost structures.
         """
@@ -45,8 +47,10 @@ class Backtester():
         self.train = train_data.dropna()
         self.test = test_data.dropna()
         self.cost = cost
-    
-    def backtest_integrity_check(self, optimizer, rebalance_freq, seed, cleanweights=False):
+
+    def backtest_integrity_check(
+        self, optimizer, rebalance_freq, seed, cleanweights=False
+    ):
         """
         Validates inputs and configurations before running a backtest.
 
@@ -78,13 +82,19 @@ class Backtester():
         """
         # Checking train and test data length and format
         if len(self.train) < 5:
-            raise DataError(f"Insufficient training data for backtest. Expected len(data) >= 5, got {len(self.train)}")
+            raise DataError(
+                f"Insufficient training data for backtest. Expected len(data) >= 5, got {len(self.train)}"
+            )
         if len(self.train) <= 0:
-            raise DataError(f"Insufficient training data for backtest. Expected len(data) > 0, got {len(self.train)}")
-        if not((self.train.columns.equals(self.test.columns))):
+            raise DataError(
+                f"Insufficient training data for backtest. Expected len(data) > 0, got {len(self.train)}"
+            )
+        if not ((self.train.columns.equals(self.test.columns))):
             raise DataError("Train and test DataFrames have different formats")
         if cleanweights is not True and cleanweights is not False:
-            raise DataError(f"Invalid cleanweights variable. Expected True or False, got {cleanweights}")
+            raise DataError(
+                f"Invalid cleanweights variable. Expected True or False, got {cleanweights}"
+            )
         # Checking optimizer validity
         try:
             optimizer.identity
@@ -93,26 +103,51 @@ class Backtester():
         # Checking rebalance frequency type and validity
         if rebalance_freq is not None:
             if rebalance_freq <= 0 or not isinstance(rebalance_freq, int):
-                raise PortfolioError(f"Invalid rebalance frequency. Expected integer within bounds [1,T], Got {rebalance_freq}")
+                raise PortfolioError(
+                    f"Invalid rebalance frequency. Expected integer within bounds [1,T], Got {rebalance_freq}"
+                )
         # Validiating numpy seed
         if seed is not None and not isinstance(seed, int):
             raise PortfolioError(f"Invalid seed. Expected integer or None, Got {seed}")
         # Cost model validity - per model check
         if len(self.cost) != 1:
-            raise PortfolioError(f"Invalid cost model. Cost model must be a dictionary of length 1, Got {len(self.cost)}")
+            raise PortfolioError(
+                f"Invalid cost model. Cost model must be a dictionary of length 1, Got {len(self.cost)}"
+            )
         first_key = next(iter(self.cost))
         first_key_low = first_key.lower()
-        if first_key_low not in ['const', 'lognormal', 'gamma', 'inversegaussian', 'jump']:
+        if first_key_low not in [
+            "const",
+            "lognormal",
+            "gamma",
+            "inversegaussian",
+            "jump",
+        ]:
             raise PortfolioError(f"Unknown cost model: {first_key}")
-        elif (first_key_low == 'const' and not isinstance(self.cost[first_key], Real)):
-            raise PortfolioError(f"Unspecified cost value. Expected real number, got {type(self.cost[first_key])}")
-        elif first_key_low in ['lognormal', 'gamma', 'inversegaussian'] and len(self.cost[first_key]) != 2:
-            raise PortfolioError(f"Invalid cost model parameter length. Expected 2, got {len(self.cost[first_key])}")
-        elif first_key_low == 'jump' and len(self.cost[first_key]) != 3:
-            raise PortfolioError(f"Invalid jump cost model parameter length. Expected 3, got {len(self.cost[first_key])}")
-            
+        elif first_key_low == "const" and not isinstance(self.cost[first_key], Real):
+            raise PortfolioError(
+                f"Unspecified cost value. Expected real number, got {type(self.cost[first_key])}"
+            )
+        elif (
+            first_key_low in ["lognormal", "gamma", "inversegaussian"]
+            and len(self.cost[first_key]) != 2
+        ):
+            raise PortfolioError(
+                f"Invalid cost model parameter length. Expected 2, got {len(self.cost[first_key])}"
+            )
+        elif first_key_low == "jump" and len(self.cost[first_key]) != 3:
+            raise PortfolioError(
+                f"Invalid jump cost model parameter length. Expected 3, got {len(self.cost[first_key])}"
+            )
 
-    def backtest(self, optimizer, rebalance_freq=None, seed=None, weight_bounds=None, clean_weights=False):
+    def backtest(
+        self,
+        optimizer,
+        rebalance_freq=None,
+        seed=None,
+        weight_bounds=None,
+        clean_weights=False,
+    ):
         """
         Execute a portfolio backtest over the test dataset using a given optimizer.
 
@@ -124,10 +159,10 @@ class Backtester():
 
         Args:
             optimizer: Portfolio optimizer object with an `optimize` method.
-            rebalance_freq (int or None): Frequency of rebalancing in time steps. 
+            rebalance_freq (int or None): Frequency of rebalancing in time steps.
                                            If None, a static weight backtest is performed.
             seed (int or None): Random seed for reproducible cost simulations.
-            weight_bounds (optional): Bounds for portfolio weights passed to the optimizer 
+            weight_bounds (optional): Bounds for portfolio weights passed to the optimizer
                                       if supported.
 
         Returns:
@@ -150,16 +185,22 @@ class Backtester():
             - Returns and weights are stored in arrays aligned with test data indices.
         """
         # Running backtester integrity checks
-        self.backtest_integrity_check(optimizer, rebalance_freq, seed, cleanweights=clean_weights)
+        self.backtest_integrity_check(
+            optimizer, rebalance_freq, seed, cleanweights=clean_weights
+        )
         # Backtest loop
         test_data = extract_trim(self.test)[1]
         # Static weight backtest
         if rebalance_freq is None:
             if weight_bounds is not None:
                 if "weight_bounds" in inspect.signature(optimizer.optimize).parameters:
-                    weights = optimizer.optimize(self.train, weight_bounds=weight_bounds)
+                    weights = optimizer.optimize(
+                        self.train, weight_bounds=weight_bounds
+                    )
                 else:
-                    raise DataError(f"Given portfolio strategy does not accept weight bounds")
+                    raise DataError(
+                        f"Given portfolio strategy does not accept weight bounds"
+                    )
             else:
                 weights = optimizer.optimize(self.train)
             if clean_weights:
@@ -170,9 +211,13 @@ class Backtester():
             weights = [None] * len(test_data)
             if weight_bounds is not None:
                 if "weight_bounds" in inspect.signature(optimizer.optimize).parameters:
-                    temp_weights = optimizer.optimize(self.train, weight_bounds=weight_bounds)
+                    temp_weights = optimizer.optimize(
+                        self.train, weight_bounds=weight_bounds
+                    )
                 else:
-                    raise DataError(f"Given portfolio strategy does not accept weight bounds")
+                    raise DataError(
+                        f"Given portfolio strategy does not accept weight bounds"
+                    )
             else:
                 temp_weights = optimizer.optimize(self.train)
             if clean_weights:
@@ -186,27 +231,49 @@ class Backtester():
                     # Concatenating them preserves this property; dropna() handles edge cases safely
                     # The optimizer therefore only sees information available until the current decision point
                     if weight_bounds is not None:
-                        if "weight_bounds" in inspect.signature(optimizer.optimize).parameters:
-                            combined_dataset = pd.concat([self.train, self.test.iloc[:t]])
-                            combined_dataset = combined_dataset[~combined_dataset.index.duplicated(keep="first")].dropna()
-                            temp_weights = optimizer.optimize(combined_dataset, w=temp_weights, weight_bounds=weight_bounds)
+                        if (
+                            "weight_bounds"
+                            in inspect.signature(optimizer.optimize).parameters
+                        ):
+                            combined_dataset = pd.concat(
+                                [self.train, self.test.iloc[:t]]
+                            )
+                            combined_dataset = combined_dataset[
+                                ~combined_dataset.index.duplicated(keep="first")
+                            ].dropna()
+                            temp_weights = optimizer.optimize(
+                                combined_dataset,
+                                w=temp_weights,
+                                weight_bounds=weight_bounds,
+                            )
                         else:
-                            raise DataError(f"Given portfolio strategy does not accept weight bounds")
+                            raise DataError(
+                                f"Given portfolio strategy does not accept weight bounds"
+                            )
                     else:
                         combined_dataset = pd.concat([self.train, self.test.iloc[:t]])
-                        combined_dataset = combined_dataset[~combined_dataset.index.duplicated(keep="first")].dropna()
-                        temp_weights = optimizer.optimize(combined_dataset, w=temp_weights)
+                        combined_dataset = combined_dataset[
+                            ~combined_dataset.index.duplicated(keep="first")
+                        ].dropna()
+                        temp_weights = optimizer.optimize(
+                            combined_dataset, w=temp_weights
+                        )
                     if clean_weights:
                         temp_weights = optimizer.clean_weights(temp_weights)
                 weights[t] = temp_weights
             weights_array = np.vstack(weights)
-        portfolio_returns = np.einsum('ij,ij->i', weights_array, test_data)
-        costs_array = slippage(weights=weights_array, returns=portfolio_returns, cost=self.cost, numpy_seed=seed)
+        portfolio_returns = np.einsum("ij,ij->i", weights_array, test_data)
+        costs_array = slippage(
+            weights=weights_array,
+            returns=portfolio_returns,
+            cost=self.cost,
+            numpy_seed=seed,
+        )
         portfolio_returns -= costs_array
         backtest_data = {
-            'returns': portfolio_returns,
-            'weights': weights_array,
-            'costs': costs_array
+            "returns": portfolio_returns,
+            "weights": weights_array,
+            "costs": costs_array,
         }
         return backtest_data
 
@@ -214,7 +281,7 @@ class Backtester():
         """
         Computes a comprehensive set of portfolio performance metrics from returns.
 
-        This method calculates risk-adjusted and absolute performance measures 
+        This method calculates risk-adjusted and absolute performance measures
         commonly used in finance, including volatility, drawdowns, and tail risk metrics.
 
         Args:
@@ -247,10 +314,16 @@ class Backtester():
         # Performance metrics
         AVERAGE = returns.mean()
         SHARPE = AVERAGE / vol if (vol > 0 and not np.isnan(vol)) else np.nan
-        SORTINO = AVERAGE / downside_vol if (downside_vol > 0 and not np.isnan(downside_vol)) else np.nan
+        SORTINO = (
+            AVERAGE / downside_vol
+            if (downside_vol > 0 and not np.isnan(downside_vol))
+            else np.nan
+        )
         VOLATILITY = vol if (vol > 0 or not np.isnan(vol)) else np.nan
         TOTAL = np.prod(1 + returns) - 1
-        MAX_DD = np.max(1 - np.cumprod(1 + returns) / np.maximum.accumulate(np.cumprod(1 + returns)))
+        MAX_DD = np.max(
+            1 - np.cumprod(1 + returns) / np.maximum.accumulate(np.cumprod(1 + returns))
+        )
         VAR = -np.quantile(returns, 0.05)
         tail_returns = returns[returns <= -VAR]
         CVAR = -tail_returns.mean() if len(tail_returns) > 0 else np.nan
@@ -260,27 +333,31 @@ class Backtester():
 
         # Zipping Text and values
         performance_metrics = [
-            'sharpe',
-            'sortino',
-            'volatility',
-            'mean_return',
-            'total_return',
-            'max_drawdown',
-            'var_95',
-            'cvar_95',
-            'skew',
-            'kurtosis',
-            'omega_0'
+            "sharpe",
+            "sortino",
+            "volatility",
+            "mean_return",
+            "total_return",
+            "max_drawdown",
+            "var_95",
+            "cvar_95",
+            "skew",
+            "kurtosis",
+            "omega_0",
         ]
         values = [VOLATILITY, AVERAGE, TOTAL, MAX_DD, VAR, CVAR]
-        results = [round(SHARPE, 5), round(SORTINO, 5)] + [round(x*100, 5) for x in values] + [round(SKEW, 5), round(KURTOSIS, 5), round(OMEGA, 5)]
+        results = (
+            [round(SHARPE, 5), round(SORTINO, 5)]
+            + [round(x * 100, 5) for x in values]
+            + [round(SKEW, 5), round(KURTOSIS, 5), round(OMEGA, 5)]
+        )
         return dict(zip(performance_metrics, results))
-    
+
     def plot_wealth(self, returns_dict, initial_wealth=1.0, savefig=False):
         """
         Plot the evolution of portfolio wealth over time on a logarithmic scale.
 
-        This method visualizes cumulative wealth for one or multiple strategies 
+        This method visualizes cumulative wealth for one or multiple strategies
         using their periodic returns. It also provides a breakeven reference line
         and optional saving of the plot to a file.
 
@@ -304,13 +381,15 @@ class Backtester():
             wealth = initial_wealth * np.cumprod(1 + returns)
             plt.plot(wealth, label=name, linewidth=2)
         plt.yscale("log")
-        plt.axhline(y=1, color='black', linestyle=':', label="Breakeven")
+        plt.axhline(y=1, color="black", linestyle=":", label="Breakeven")
         plt.xlabel("Time", fontsize=12)
         plt.ylabel("Wealth", fontsize=12)
-        plt.title("Portfolio Wealth Over Time", fontsize=14, fontweight='bold')
+        plt.title("Portfolio Wealth Over Time", fontsize=14, fontweight="bold")
         plt.legend(fontsize=10)
-        plt.grid(True, linestyle=':', linewidth=0.7, alpha=0.7)
+        plt.grid(True, linestyle=":", linewidth=0.7, alpha=0.7)
         plt.tight_layout()
         if savefig:
-            plt.savefig(f"plot_{int(time.time()*1000)}.png", dpi=300, bbox_inches='tight')
+            plt.savefig(
+                f"plot_{int(time.time()*1000)}.png", dpi=300, bbox_inches="tight"
+            )
         plt.show()

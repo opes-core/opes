@@ -6,13 +6,15 @@ from opes.methods.base_optimizer import Optimizer
 from ..utils import extract_trim, find_regularizer, test_integrity, find_constraint
 from ..errors import OptimizationError, PortfolioError, DataError
 
+
 class Uniform(Optimizer):
     """
     Equal-weighted (1/N) portfolio optimizer.
 
-    Assigns an identical weight to every asset in the portfolio regardless of 
+    Assigns an identical weight to every asset in the portfolio regardless of
     performance or risk metrics.
     """
+
     def __init__(self):
         """
         Initializes the Uniform optimizer.
@@ -21,7 +23,7 @@ class Uniform(Optimizer):
 
         self.tickers = None
         self.weights = None
-    
+
     def extract_tickers(self, data):
         """
         Extracts unique ticker symbols from the columns of the input DataFrame.
@@ -31,10 +33,10 @@ class Uniform(Optimizer):
         """
         if data is None:
             raise DataError("Portfolio data not specified.")
-        
+
         # Extracting tickers
         self.tickers = data.columns.get_level_values(0).unique().tolist()
-    
+
     def optimize(self, data=None):
         """
         Assigns equal weights to all assets.
@@ -48,13 +50,15 @@ class Uniform(Optimizer):
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers))
         return self.weights
 
+
 class InverseVolatility(Optimizer):
     """
     Inverse Volatility weighted portfolio optimizer.
 
-    Allocates weights proportional to the reciprocal of each asset's standard deviation. 
+    Allocates weights proportional to the reciprocal of each asset's standard deviation.
     Assets with lower volatility receive higher allocations.
     """
+
     def __init__(self):
         """
         Initializes the InverseVolatility optimizer.
@@ -64,7 +68,7 @@ class InverseVolatility(Optimizer):
 
         self.tickers = None
         self.weights = None
-    
+
     def prepare_inputs(self, data):
         """
         Processes data to extract tickers and calculate the volatility (standard deviation) array.
@@ -77,7 +81,7 @@ class InverseVolatility(Optimizer):
         # Extracting volatility array and testing integrity
         self.volarray = np.std(data, axis=0, ddof=1)
         test_integrity(tickers=self.tickers, volatility_array=self.volarray)
-    
+
     def optimize(self, data=None):
         """
         Calculates weights based on inverse volatility.
@@ -87,21 +91,23 @@ class InverseVolatility(Optimizer):
         """
         # Preparing inputs for finding weights
         self.prepare_inputs(data)
-        self.weights = (1 / self.volarray) / ( 1 / self.volarray).sum()
+        self.weights = (1 / self.volarray) / (1 / self.volarray).sum()
         return self.weights
+
 
 class SoftmaxMean(Optimizer):
     """
     Softmax Mean portfolio optimizer.
 
-    Allocates weights by applying the softmax function to the mean returns of assets, 
+    Allocates weights by applying the softmax function to the mean returns of assets,
     scaled by a temperature parameter.
     """
+
     def __init__(self, temperature=1):
         """
         Initializes the SoftmaxMean optimizer.
 
-        :param temperature: Scalar that controls the sensitivity of the weights to return 
+        :param temperature: Scalar that controls the sensitivity of the weights to return
                             differences (higher temperature leads to more uniform weights).
         """
         self.identity = "softmean"
@@ -110,7 +116,7 @@ class SoftmaxMean(Optimizer):
 
         self.tickers = None
         self.weights = None
-    
+
     def prepare_inputs(self, data, custom_mean=None):
         """
         Processes data to extract tickers and calculate mean returns.
@@ -123,12 +129,14 @@ class SoftmaxMean(Optimizer):
 
         # Quick check for temperature validity
         if self.temperature <= 0:
-            raise PortfolioError(f"Invalid temperature. Expected within bounds (0, inf], got {self.temperature})")
+            raise PortfolioError(
+                f"Invalid temperature. Expected within bounds (0, inf], got {self.temperature})"
+            )
 
         # Extracting mean and testing integrity
         self.mean = np.mean(data, axis=0) if custom_mean is None else custom_mean
         test_integrity(tickers=self.tickers, mean=self.mean)
-    
+
     def optimize(self, data=None, custom_mean=None):
         """
         Calculates weights using the softmax transformation of mean returns.
@@ -139,19 +147,23 @@ class SoftmaxMean(Optimizer):
         """
         # Preparing inputs
         self.prepare_inputs(data, custom_mean=custom_mean)
-    
+
         # Solving weights
-        self.weights = np.exp(self.mean / self.temperature - np.max(self.mean / self.temperature))
+        self.weights = np.exp(
+            self.mean / self.temperature - np.max(self.mean / self.temperature)
+        )
         self.weights /= self.weights.sum()
         return self.weights
+
 
 class MaxDiversification(Optimizer):
     """
     Maximum Diversification Ratio optimizer.
 
-    Maximizes the ratio of the weighted average of asset volatilities to the 
+    Maximizes the ratio of the weighted average of asset volatilities to the
     total portfolio volatility (the Diversification Ratio).
     """
+
     def __init__(self, reg=None, strength=0):
         """
         Initializes the MaxDiversification optimizer.
@@ -167,7 +179,7 @@ class MaxDiversification(Optimizer):
 
         self.tickers = None
         self.weights = None
-    
+
     def prepare_optimization_inputs(self, data, weight_bounds, w, custom_cov=None):
         """
         Extracts returns and calculates the covariance matrix and per-asset volatility.
@@ -179,23 +191,34 @@ class MaxDiversification(Optimizer):
         """
         # Extracting trimmed return data from OHLCV and obtaining tickers
         self.tickers, data = extract_trim(data)
-    
+
         # Checking for covariance, per-asset volatility and weights
         if custom_cov is None:
             # Handling invertibility using the small epsilon * identity matrix
             # small epsilon scales with the trace of the covariance
             self.covariance = np.cov(data, rowvar=False)
             epsilon = 1e-3 * np.trace(self.covariance) / self.covariance.shape[0]
-            self.covariance =  self.covariance + epsilon * np.eye(self.covariance.shape[0])
+            self.covariance = self.covariance + epsilon * np.eye(
+                self.covariance.shape[0]
+            )
         else:
             self.covariance = custom_cov
-        self.volarray = np.sqrt(np.diag(self.covariance))   
-        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+        self.volarray = np.sqrt(np.diag(self.covariance))
+        self.weights = np.array(
+            np.ones(len(self.tickers)) / len(self.tickers) if w is None else w,
+            dtype=float,
+        )
 
         # Functions to test data integrity
-        test_integrity(tickers=self.tickers, weights=self.weights, cov=self.covariance, bounds=weight_bounds, volatility_array=self.volarray)
-    
-    def optimize(self, data=None, weight_bounds=(0,1), w=None, custom_cov=None):
+        test_integrity(
+            tickers=self.tickers,
+            weights=self.weights,
+            cov=self.covariance,
+            bounds=weight_bounds,
+            volatility_array=self.volarray,
+        )
+
+    def optimize(self, data=None, weight_bounds=(0, 1), w=None, custom_cov=None):
         """
         Executes the Maximum Diversification optimization.
 
@@ -210,18 +233,27 @@ class MaxDiversification(Optimizer):
         self.prepare_optimization_inputs(data, weight_bounds, w, custom_cov=custom_cov)
         constraint = find_constraint(weight_bounds)
         w = self.weights
-        
+
         # Optimization objective and results
         def f(w):
             var = w @ self.covariance @ w
             weightvol = w @ self.volarray
             return -(weightvol / np.sqrt(var)) + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
+
+        result = minimize(
+            f,
+            w,
+            method="SLSQP",
+            bounds=[weight_bounds] * len(w),
+            constraints=constraint,
+        )
         if result.success:
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError(f"Maximum diversification optimization failed: {result.message}")
+            raise OptimizationError(
+                f"Maximum diversification optimization failed: {result.message}"
+            )
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -233,13 +265,15 @@ class MaxDiversification(Optimizer):
         self.reg = find_regularizer(reg)
         self.strength = strength
 
+
 class RiskParity(Optimizer):
     """
     Equal Risk Contribution (Risk Parity) optimizer.
 
-    Calculates weights such that each asset contributes an equal amount of 
+    Calculates weights such that each asset contributes an equal amount of
     marginal risk to the total portfolio volatility.
     """
+
     def __init__(self, reg=None, strength=0):
         """
         Initializes the RiskParity optimizer.
@@ -254,7 +288,7 @@ class RiskParity(Optimizer):
 
         self.tickers = None
         self.weights = None
-    
+
     def prepare_optimization_inputs(self, data, weight_bounds, w, custom_cov=None):
         """
         Processes data and calculates the covariance matrix for risk contribution analysis.
@@ -266,22 +300,32 @@ class RiskParity(Optimizer):
         """
         # Extracting trimmed return data from OHLCV and obtaining tickers
         self.tickers, data = extract_trim(data)
-    
+
         # Checking for covariance and weights
         if custom_cov is None:
             # Handling invertibility using the small epsilon * identity matrix
             # small epsilon scales with the trace of the covariance
             self.covariance = np.cov(data, rowvar=False)
             epsilon = 1e-3 * np.trace(self.covariance) / self.covariance.shape[0]
-            self.covariance =  self.covariance + epsilon * np.eye(self.covariance.shape[0])
+            self.covariance = self.covariance + epsilon * np.eye(
+                self.covariance.shape[0]
+            )
         else:
             self.covariance = custom_cov
-        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+        self.weights = np.array(
+            np.ones(len(self.tickers)) / len(self.tickers) if w is None else w,
+            dtype=float,
+        )
 
         # Functions to test data integrity
-        test_integrity(tickers=self.tickers, weights=self.weights, cov=self.covariance, bounds=weight_bounds)
-    
-    def optimize(self, data=None, weight_bounds=(0,1), w=None, custom_cov=None):
+        test_integrity(
+            tickers=self.tickers,
+            weights=self.weights,
+            cov=self.covariance,
+            bounds=weight_bounds,
+        )
+
+    def optimize(self, data=None, weight_bounds=(0, 1), w=None, custom_cov=None):
         """
         Executes the Risk Parity optimization by minimizing the variance of risk contributions.
 
@@ -296,19 +340,30 @@ class RiskParity(Optimizer):
         self.prepare_optimization_inputs(data, weight_bounds, w, custom_cov=custom_cov)
         constraint = find_constraint(weight_bounds)
         w = self.weights
-        
+
         # Optimization objective and results
         def f(w):
             portfolio_volatility = max(np.sqrt((w @ self.covariance @ w)), 1e-10)
             risk_contribution = w * (self.covariance @ w) / portfolio_volatility
             target_contribution = portfolio_volatility / len(w)
-            return np.sum((risk_contribution - target_contribution)**2) + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
+            return np.sum(
+                (risk_contribution - target_contribution) ** 2
+            ) + self.strength * self.reg(w)
+
+        result = minimize(
+            f,
+            w,
+            method="SLSQP",
+            bounds=[weight_bounds] * len(w),
+            constraints=constraint,
+        )
         if result.success:
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError(f"Risk parity optimization failed: {result.message}")
+            raise OptimizationError(
+                f"Risk parity optimization failed: {result.message}"
+            )
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -320,14 +375,16 @@ class RiskParity(Optimizer):
         self.reg = find_regularizer(reg)
         self.strength = strength
 
+
 class REPO(Optimizer):
     """
     Return-Entropy Portfolio Optimizer (REPO).
 
-    Optimizes the portfolio by balancing expected returns against the Shannon entropy 
-    of the portfolio's return distribution. Higher entropy implies a more 
+    Optimizes the portfolio by balancing expected returns against the Shannon entropy
+    of the portfolio's return distribution. Higher entropy implies a more
     uncertain/spread-out return distribution.
     """
+
     def __init__(self, risk_aversion=1, reg=None, strength=1):
         """
         Initializes the REPO optimizer.
@@ -344,8 +401,10 @@ class REPO(Optimizer):
 
         self.tickers = None
         self.weights = None
-    
-    def prepare_optimization_inputs(self, data, weight_bounds, w, bins, custom_mean=None):
+
+    def prepare_optimization_inputs(
+        self, data, weight_bounds, w, bins, custom_mean=None
+    ):
         """
         Processes input data, calculates mean returns, and validates histogram-based parameters.
 
@@ -358,14 +417,25 @@ class REPO(Optimizer):
         """
         # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
         self.tickers, data = extract_trim(data)
-        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+        self.weights = np.array(
+            np.ones(len(self.tickers)) / len(self.tickers) if w is None else w,
+            dtype=float,
+        )
         self.mean = np.mean(data, axis=0) if custom_mean is None else custom_mean
-        
+
         # Functions to test data integrity and find optimization constraint
-        test_integrity(tickers=self.tickers, weights=self.weights, bounds=weight_bounds, mean=self.mean, hist_bins=bins)
+        test_integrity(
+            tickers=self.tickers,
+            weights=self.weights,
+            bounds=weight_bounds,
+            mean=self.mean,
+            hist_bins=bins,
+        )
         return data
-    
-    def optimize(self, data=None, weight_bounds=(0,1), w=None, bin=20, custom_mean=None):
+
+    def optimize(
+        self, data=None, weight_bounds=(0, 1), w=None, bin=20, custom_mean=None
+    ):
         """
         Executes the Return-Entropy optimization.
 
@@ -379,10 +449,12 @@ class REPO(Optimizer):
         :return: Optimized weight vector.
         """
         # Preparing optimization and finding constraint
-        trimmed_return_data = self.prepare_optimization_inputs(data, weight_bounds, w, bin, custom_mean=custom_mean)
+        trimmed_return_data = self.prepare_optimization_inputs(
+            data, weight_bounds, w, bin, custom_mean=custom_mean
+        )
         constraint = find_constraint(weight_bounds)
         w = self.weights
-        
+
         # Optimization objective and results
         def f(w):
             X = trimmed_return_data @ w
@@ -393,8 +465,19 @@ class REPO(Optimizer):
             # Computing both the terms
             mean_term = self.mean @ w
             entropy_term = -np.sum(probabilities * np.log(probabilities))
-            return -mean_term + self.risk_aversion * entropy_term + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
+            return (
+                -mean_term
+                + self.risk_aversion * entropy_term
+                + self.strength * self.reg(w)
+            )
+
+        result = minimize(
+            f,
+            w,
+            method="SLSQP",
+            bounds=[weight_bounds] * len(w),
+            constraints=constraint,
+        )
         if result.success:
             self.weights = result.x
             return self.weights

@@ -9,13 +9,15 @@ from ..errors import OptimizationError, PortfolioError
 # Small epsilon value for numerical stability
 EPSILON = 1e-8
 
+
 class BCRP(Optimizer):
     """
     Best Constant Rebalanced Portfolio (BCRP) optimizer.
 
-    Finds the static weight vector that would have maximized the total wealth 
+    Finds the static weight vector that would have maximized the total wealth
     of the portfolio in hindsight over the provided historical data.
     """
+
     def __init__(self, reg=None, strength=1):
         """
         Initializes the BCRP optimizer.
@@ -29,7 +31,7 @@ class BCRP(Optimizer):
 
         self.tickers = None
         self.weights = None
-    
+
     def prepare_optimization_inputs(self, data, w):
         """
         Processes data to extract tickers and return history, and initializes weights.
@@ -40,12 +42,15 @@ class BCRP(Optimizer):
         """
         # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
         self.tickers, data = extract_trim(data)
-        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+        self.weights = np.array(
+            np.ones(len(self.tickers)) / len(self.tickers) if w is None else w,
+            dtype=float,
+        )
 
         # Functions to test data integrity and find optimization constraint
         test_integrity(tickers=self.tickers, weights=self.weights)
         return data
-    
+
     def optimize(self, data=None, w=None):
         """
         Executes the BCRP optimization by maximizing the product of portfolio returns.
@@ -58,14 +63,17 @@ class BCRP(Optimizer):
         # Preparing optimization and finding constraint
         # Bounds are defaulted to (0,1), constrained to the simplex
         trimmed_return_data = self.prepare_optimization_inputs(data, w)
-        constraint = find_constraint(bounds=(0,1))
+        constraint = find_constraint(bounds=(0, 1))
         w = self.weights
-        
+
         # Optimization objective and results
         def f(w):
             X = np.prod(1 + np.maximum(trimmed_return_data, -0.95) @ w)
             return -X + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[(0,1)]*len(w), constraints=constraint)
+
+        result = minimize(
+            f, w, method="SLSQP", bounds=[(0, 1)] * len(w), constraints=constraint
+        )
         if result.success:
             self.weights = result.x
             return self.weights
@@ -82,14 +90,16 @@ class BCRP(Optimizer):
         self.reg = find_regularizer(reg)
         self.strength = strength
 
+
 class ExponentialGradient(Optimizer):
     """
     Exponential Gradient (EG) optimizer for online portfolio selection.
 
-    An iterative update strategy that adjusts weights based on the relative 
-    performance of assets in the most recent period, used to track the best 
+    An iterative update strategy that adjusts weights based on the relative
+    performance of assets in the most recent period, used to track the best
     performing assets over time.
     """
+
     def __init__(self, learning_rate=0.3):
         """
         Initializes the Exponential Gradient optimizer.
@@ -101,7 +111,7 @@ class ExponentialGradient(Optimizer):
 
         self.tickers = None
         self.weights = None
-    
+
     def prepare_inputs(self, data, w):
         """
         Extracts recent returns and initializes the weight vector for the update step.
@@ -113,17 +123,20 @@ class ExponentialGradient(Optimizer):
         # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
         # Defaulting previous weights to 1/N if none are given
         self.tickers, data = extract_trim(data)
-        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+        self.weights = np.array(
+            np.ones(len(self.tickers)) / len(self.tickers) if w is None else w,
+            dtype=float,
+        )
 
         # Functions to test data integrity and find optimization constraint
         test_integrity(tickers=self.tickers, weights=self.weights)
         return data
-    
+
     def optimize(self, data=None, w=None):
         """
         Performs the Exponential Gradient update step.
 
-        Uses the log-sum-exp technique to update weights based on the gradient 
+        Uses the log-sum-exp technique to update weights based on the gradient
         of the log-return relative to the most recent data point.
 
         :param data: Input data containing at least the most recent return.
@@ -143,7 +156,10 @@ class ExponentialGradient(Optimizer):
         # Exponential Gradient update & normalization
         # We apply the log-sum-exp technique with subtracting the maximum to improve numerical stability
         # Weights are shift-invariant since they are exponentiated
-        log_w = np.log(self.weights + EPSILON) + self.learning_rate * recent_return / portfolio_return
+        log_w = (
+            np.log(self.weights + EPSILON)
+            + self.learning_rate * recent_return / portfolio_return
+        )
         log_w -= log_w.max()
         new_weights = np.exp(log_w)
         self.weights = new_weights / new_weights.sum()

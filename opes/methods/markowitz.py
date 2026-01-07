@@ -6,13 +6,15 @@ from opes.methods.base_optimizer import Optimizer
 from ..utils import extract_trim, find_regularizer, test_integrity, find_constraint
 from ..errors import OptimizationError, PortfolioError
 
+
 class MaxMean(Optimizer):
     """
     Optimizer to maximize the portfolio's expected mean return.
 
-    This class solves the objective: max(w'μ - λ * reg(w)), where μ is the 
+    This class solves the objective: max(w'μ - λ * reg(w)), where μ is the
     expected return vector and λ is the regularization strength.
     """
+
     def __init__(self, reg=None, strength=1):
         """
         Initializes the MaxMean optimizer.
@@ -27,7 +29,7 @@ class MaxMean(Optimizer):
 
         self.tickers = None
         self.weights = None
-    
+
     def prepare_optimization_inputs(self, data, weight_bounds, w, custom_mean=None):
         """
         Processes input data, extracts tickers, calculates mean returns, and validates integrity.
@@ -39,15 +41,23 @@ class MaxMean(Optimizer):
         """
         # Extracting trimmed return data from OHLCV and obtaining tickers
         self.tickers, data = extract_trim(data)
-        
+
         # Checking for mean and weights and assigning optimization data accordingly
         self.mean = np.mean(data, axis=0) if custom_mean is None else custom_mean
-        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+        self.weights = np.array(
+            np.ones(len(self.tickers)) / len(self.tickers) if w is None else w,
+            dtype=float,
+        )
 
         # Functions to test data integrity and find optimization constraint
-        test_integrity(tickers=self.tickers, weights=self.weights, mean=self.mean, bounds=weight_bounds)
-    
-    def optimize(self, data=None, weight_bounds=(0,1), w=None, custom_mean=None):
+        test_integrity(
+            tickers=self.tickers,
+            weights=self.weights,
+            mean=self.mean,
+            bounds=weight_bounds,
+        )
+
+    def optimize(self, data=None, weight_bounds=(0, 1), w=None, custom_mean=None):
         """
         Executes the Maximum Mean optimization.
 
@@ -59,19 +69,30 @@ class MaxMean(Optimizer):
         :raises OptimizationError: If the SLSQP solver fails to converge.
         """
         # Preparing optimization and finding constraint
-        self.prepare_optimization_inputs(data, weight_bounds, w, custom_mean=custom_mean)
+        self.prepare_optimization_inputs(
+            data, weight_bounds, w, custom_mean=custom_mean
+        )
         constraint = find_constraint(weight_bounds)
         w = self.weights
-        
+
         # Optimization objective and results
         def f(w):
             return -(self.mean @ w - self.strength * self.reg(w))
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
+
+        result = minimize(
+            f,
+            w,
+            method="SLSQP",
+            bounds=[weight_bounds] * len(w),
+            constraints=constraint,
+        )
         if result.success:
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError(f"Maximum mean optimization failed: {result.message}")
+            raise OptimizationError(
+                f"Maximum mean optimization failed: {result.message}"
+            )
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -83,13 +104,15 @@ class MaxMean(Optimizer):
         self.reg = find_regularizer(reg)
         self.strength = strength
 
+
 class MinVariance(Optimizer):
     """
     Optimizer for the Global Minimum Variance (GMV) portfolio.
 
-    Solves the objective: min(w'Σw + λ * reg(w)), where Σ is the 
+    Solves the objective: min(w'Σw + λ * reg(w)), where Σ is the
     covariance matrix.
     """
+
     def __init__(self, reg=None, strength=1):
         """
         Initializes the MinVariance optimizer.
@@ -104,7 +127,7 @@ class MinVariance(Optimizer):
 
         self.tickers = None
         self.weights = None
-    
+
     def prepare_optimization_inputs(self, data, weight_bounds, w, custom_cov=None):
         """
         Processes input data, calculates the covariance matrix, and validates integrity.
@@ -116,22 +139,32 @@ class MinVariance(Optimizer):
         """
         # Extracting trimmed return data from OHLCV and obtaining tickers
         self.tickers, data = extract_trim(data)
-    
+
         # Checking for covariance and weights and assigning optimization data accordingly
         if custom_cov is None:
             # Handling invertibility using the small epsilon * identity matrix
             # small epsilon scales with the trace of the covariance
             self.covariance = np.cov(data, rowvar=False)
             epsilon = 1e-3 * np.trace(self.covariance) / self.covariance.shape[0]
-            self.covariance =  self.covariance + epsilon * np.eye(self.covariance.shape[0])
+            self.covariance = self.covariance + epsilon * np.eye(
+                self.covariance.shape[0]
+            )
         else:
             self.covariance = custom_cov
-        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+        self.weights = np.array(
+            np.ones(len(self.tickers)) / len(self.tickers) if w is None else w,
+            dtype=float,
+        )
 
         # Functions to test data integrity and find optimization constraint
-        test_integrity(tickers=self.tickers, weights=self.weights, cov=self.covariance, bounds=weight_bounds)
-    
-    def optimize(self, data=None, weight_bounds=(0,1), w=None, custom_cov=None):
+        test_integrity(
+            tickers=self.tickers,
+            weights=self.weights,
+            cov=self.covariance,
+            bounds=weight_bounds,
+        )
+
+    def optimize(self, data=None, weight_bounds=(0, 1), w=None, custom_cov=None):
         """
         Executes the Global Minimum Variance optimization.
 
@@ -146,16 +179,25 @@ class MinVariance(Optimizer):
         self.prepare_optimization_inputs(data, weight_bounds, w, custom_cov=custom_cov)
         constraint = find_constraint(weight_bounds)
         w = self.weights
-        
+
         # Optimization objective and results
         def f(w):
             return w @ self.covariance @ w + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
+
+        result = minimize(
+            f,
+            w,
+            method="SLSQP",
+            bounds=[weight_bounds] * len(w),
+            constraints=constraint,
+        )
         if result.success:
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError(f"Global minimum optimization failed: {result.message}")
+            raise OptimizationError(
+                f"Global minimum optimization failed: {result.message}"
+            )
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -167,11 +209,12 @@ class MinVariance(Optimizer):
         self.reg = find_regularizer(reg)
         self.strength = strength
 
+
 class MeanVariance(Optimizer):
     """
     Standard Markowitz Mean-Variance Optimizer.
 
-    Solves the objective: min(-w'μ + (γ/2) * w'Σw + λ * reg(w)), 
+    Solves the objective: min(-w'μ + (γ/2) * w'Σw + λ * reg(w)),
     where γ is the risk aversion coefficient.
     """
 
@@ -192,8 +235,10 @@ class MeanVariance(Optimizer):
 
         self.tickers = None
         self.weights = None
-    
-    def prepare_optimization_inputs(self, data, weight_bounds, w, custom_cov=None, custom_mean=None):
+
+    def prepare_optimization_inputs(
+        self, data, weight_bounds, w, custom_cov=None, custom_mean=None
+    ):
         """
         Processes input data, calculates mean returns and covariance, and validates integrity.
 
@@ -205,7 +250,7 @@ class MeanVariance(Optimizer):
         """
         # Extracting trimmed return data from OHLCV and obtaining tickers
         self.tickers, data = extract_trim(data)
-    
+
         # Checking for mean, covaraince and weights and assigning optimization data accordingly
         self.mean = np.mean(data, axis=0) if custom_mean is None else custom_mean
         if custom_cov is None:
@@ -213,15 +258,27 @@ class MeanVariance(Optimizer):
             # small epsilon scales with the trace of the covariance
             self.covariance = np.cov(data, rowvar=False)
             epsilon = 1e-3 * np.trace(self.covariance) / self.covariance.shape[0]
-            self.covariance =  self.covariance + epsilon * np.eye(self.covariance.shape[0])
+            self.covariance = self.covariance + epsilon * np.eye(
+                self.covariance.shape[0]
+            )
         else:
             self.covariance = custom_cov
-        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+        self.weights = np.array(
+            np.ones(len(self.tickers)) / len(self.tickers) if w is None else w,
+            dtype=float,
+        )
 
         # Functions to test data integrity and find optimization constraint
-        test_integrity(tickers=self.tickers, weights=self.weights, cov=self.covariance, bounds=weight_bounds)
-    
-    def optimize(self, data=None, weight_bounds=(0,1), w=None, custom_cov=None, custom_mean=None):
+        test_integrity(
+            tickers=self.tickers,
+            weights=self.weights,
+            cov=self.covariance,
+            bounds=weight_bounds,
+        )
+
+    def optimize(
+        self, data=None, weight_bounds=(0, 1), w=None, custom_cov=None, custom_mean=None
+    ):
         """
         Executes the Mean-Variance optimization.
 
@@ -233,19 +290,34 @@ class MeanVariance(Optimizer):
         :return: Optimized weight vector.
         """
         # Preparing optimization and finding constraint
-        self.prepare_optimization_inputs(data, weight_bounds, w, custom_cov=custom_cov, custom_mean=custom_mean)
+        self.prepare_optimization_inputs(
+            data, weight_bounds, w, custom_cov=custom_cov, custom_mean=custom_mean
+        )
         constraint = find_constraint(weight_bounds)
         w = self.weights
-        
+
         # Optimization objective and results
         def f(w):
-            return -self.mean @ w + (self.risk_aversion / 2) *(w @ self.covariance @ w) + self.strength * self.reg(w)
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
+            return (
+                -self.mean @ w
+                + (self.risk_aversion / 2) * (w @ self.covariance @ w)
+                + self.strength * self.reg(w)
+            )
+
+        result = minimize(
+            f,
+            w,
+            method="SLSQP",
+            bounds=[weight_bounds] * len(w),
+            constraints=constraint,
+        )
         if result.success:
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError(f"Mean variance optimization failed: {result.message}")
+            raise OptimizationError(
+                f"Mean variance optimization failed: {result.message}"
+            )
 
     def set_regularizer(self, reg=None, strength=1):
         """
@@ -257,11 +329,12 @@ class MeanVariance(Optimizer):
         self.reg = find_regularizer(reg)
         self.strength = strength
 
+
 class MaxSharpe(Optimizer):
     """
     Optimizer to maximize the portfolio Sharpe Ratio.
 
-    Solves the objective: max((w'μ - Rf) / sqrt(w'Σw) - λ * reg(w)), 
+    Solves the objective: max((w'μ - Rf) / sqrt(w'Σw) - λ * reg(w)),
     where Rf is the risk-free rate.
     """
 
@@ -282,8 +355,10 @@ class MaxSharpe(Optimizer):
 
         self.tickers = None
         self.weights = None
-    
-    def prepare_optimization_inputs(self, data, weight_bounds, w, custom_cov=None, custom_mean=None):
+
+    def prepare_optimization_inputs(
+        self, data, weight_bounds, w, custom_cov=None, custom_mean=None
+    ):
         """
         Processes input data, calculates mean returns and covariance, and validates integrity.
 
@@ -295,7 +370,7 @@ class MaxSharpe(Optimizer):
         """
         # Extracting trimmed return data from OHLCV and obtaining tickers
         self.tickers, data = extract_trim(data)
-    
+
         # Checking for mean, covariance and weights and assigning optimization data accordingly
         self.mean = np.mean(data, axis=0) if custom_mean is None else custom_mean
         if custom_cov is None:
@@ -303,15 +378,27 @@ class MaxSharpe(Optimizer):
             # small epsilon scales with the trace of the covariance
             self.covariance = np.cov(data, rowvar=False)
             epsilon = 1e-3 * np.trace(self.covariance) / self.covariance.shape[0]
-            self.covariance =  self.covariance + epsilon * np.eye(self.covariance.shape[0])
+            self.covariance = self.covariance + epsilon * np.eye(
+                self.covariance.shape[0]
+            )
         else:
             self.covariance = custom_cov
-        self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers) if w is None else w, dtype=float)
+        self.weights = np.array(
+            np.ones(len(self.tickers)) / len(self.tickers) if w is None else w,
+            dtype=float,
+        )
 
         # Functions to test data integrity and find optimization constraint
-        test_integrity(tickers=self.tickers, weights=self.weights, cov=self.covariance, bounds=weight_bounds)
-    
-    def optimize(self, data=None, weight_bounds=(0,1), w=None, custom_cov=None, custom_mean=None):
+        test_integrity(
+            tickers=self.tickers,
+            weights=self.weights,
+            cov=self.covariance,
+            bounds=weight_bounds,
+        )
+
+    def optimize(
+        self, data=None, weight_bounds=(0, 1), w=None, custom_cov=None, custom_mean=None
+    ):
         """
         Executes the Maximum Sharpe Ratio optimization.
 
@@ -323,19 +410,34 @@ class MaxSharpe(Optimizer):
         :return: Optimized weight vector.
         """
         # Preparing optimization and finding constraint
-        self.prepare_optimization_inputs(data, weight_bounds, w, custom_cov=custom_cov, custom_mean=custom_mean)
+        self.prepare_optimization_inputs(
+            data, weight_bounds, w, custom_cov=custom_cov, custom_mean=custom_mean
+        )
         constraint = find_constraint(weight_bounds)
         w = self.weights
-        
+
         # Optimization objective and results
         def f(w):
-            return - ((self.mean @ w - self.risk_free) /  max(np.sqrt((w @ self.covariance @ w)), 1e-10) - self.strength * self.reg(w))
-        result = minimize(f, w, method='SLSQP', bounds=[weight_bounds]*len(w), constraints=constraint)
+            return -(
+                (self.mean @ w - self.risk_free)
+                / max(np.sqrt((w @ self.covariance @ w)), 1e-10)
+                - self.strength * self.reg(w)
+            )
+
+        result = minimize(
+            f,
+            w,
+            method="SLSQP",
+            bounds=[weight_bounds] * len(w),
+            constraints=constraint,
+        )
         if result.success:
             self.weights = result.x
             return self.weights
         else:
-            raise OptimizationError(f"Maximum sharpe optimization failed: {result.message}")
+            raise OptimizationError(
+                f"Maximum sharpe optimization failed: {result.message}"
+            )
 
     def set_regularizer(self, reg=None, strength=1):
         """
