@@ -7,31 +7,6 @@ from opes.errors import DataError, PortfolioError
 
 # Regularizer finding function
 def find_regularizer(reg):
-    """
-    Return a regularization function based on the specified type.
-
-    Parameters
-    ----------
-    reg : str or None
-        The type of regularizer to use. Supported options are:
-            - None: No regularization, returns a function that always outputs 0.
-            - "l1": L1 regularization, returns the sum of absolute weights to encourage sparsity.
-            - "l2": L2 regularization, returns the sum of squared weights.
-            - "maxweight": Maximum weight regularization, returns the largest absolute weight.
-            - "entropy": Entropy regularization, returns the sum of |w| * log(|w| + 1e-12) for numerical stability.
-            - "variance": Variance regularization, returns the variance of the weights to encourage balanced allocations; returns 0 for a single weight.
-            - "MPAD": Mean Absolute Pairwise Deviation regularization, returns the mean absolute pairwise difference between weights to encourage balance.
-
-    Returns
-    -------
-    function
-        A function that takes a weight vector `w` as input and computes the corresponding regularization value.
-
-    Raises
-    ------
-    PortfolioError
-        If `reg` is not one of the supported regularizer types.
-    """
     regulizers = {
         None: lambda w: 0,
         "l1": lambda w: np.sum(np.abs(w)),
@@ -56,28 +31,6 @@ def all_elements_are_type(sequence, target):
 
 # Extract and trim data for optimizers and backtesting engine. Returns tickers and returns
 def extract_trim(data):
-    """
-    Extract adjusted close price returns from multi-level DataFrame and align series lengths.
-
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        Multi-index DataFrame with tickers as the first level and OHLCV columns as the second level. Must contain 'Close' prices.
-        Single-index DataFrame with tickers as the first level and per-day prices.
-
-    Returns
-    -------
-    tickers : list
-        List of unique ticker symbols from the DataFrame.
-    returns : np.ndarray
-        2D array of percentage returns for each ticker, trimmed to the shortest series length.
-
-    Raises
-    ------
-    DataError
-        If `data` is None.
-        If 'Close' is not present within data
-    """
     if data is None:
         raise DataError("Data not specified")
     # Check if columns have a MultiIndex
@@ -105,46 +58,9 @@ def extract_trim(data):
 
 # Optimization constraints finding function
 def find_constraint(bounds, constraint_type=1):
-    """
-    Generate linear equality constraints for portfolio optimization based on weight bounds.
-
-    This function produces a list of constraint dictionaries compatible with SciPy optimizers.
-    It handles both net-budget and gross-exposure constraints depending on the portfolio regime.
-
-    Parameters
-    ----------
-    bounds : tuple of float
-        Weight bounds in the format (min, max).
-    constraint_type : int, optional
-        Determines which weights to sum over:
-            - 1: all weights
-            - 2: all weights except the last one
-        Default is 1.
-
-    Returns
-    -------
-    list of dict
-        Each dict represents a single equality constraint in the form required by SciPy's
-        `minimize` function: {'type': 'eq', 'fun': callable}.
-
-    Notes
-    -----
-    - If bounds span negative to positive (long-short), a **gross exposure** constraint
-      (`sum(abs(weights)) = 1`) is added.
-    - For fully long or fully short portfolios, a **net exposure** constraint
-      (`sum(weights) = ±1`) is applied with a `shift` determined by bounds:
-        - 0 for long-short
-        - 1 for short-only
-        - -1 for long-only
-    - `constraint_type` controls whether the last weight is included in the sum,
-      which can be useful for sequential optimization or pivoted variables.
-    """
     constraint_list = []
     if bounds[0] < 0 and bounds[1] > 0:
         shift = 0
-        # Setting Gross exposure to 1
-        # Makes objective non-convex in general
-        constraint_list.append({"type": "eq", "fun": lambda x: np.abs(x).sum() - 1})
     elif bounds[1] < 0:
         shift = 1
     else:
@@ -156,26 +72,6 @@ def find_constraint(bounds, constraint_type=1):
 
 # Slippage function
 def slippage(weights, returns, cost, numpy_seed=None):
-    """
-    Compute elementwise portfolio slippage given weights, returns, and cost model.
-
-    Parameters
-    ----------
-    weights : np.ndarray, shape (T, N)
-    returns : np.ndarray, shape (T, N)
-    cost : dict
-        Must have exactly one key. Supported models:
-        - 'const': scalar
-        - 'gamma': [shape, scale]
-        - 'lognormal': [mean, sigma]
-        - 'inversegaussian': [mean, scale]
-        - 'jump': [lambda, mu, sigma] (compound Poisson)
-    numpy_seed: int, numpy rng seed
-
-    Returns
-    -------
-    turnover_array : np.ndarray, shape (T,)
-    """
     numpy_rng = np.random.default_rng(numpy_seed)
     turnover_array = np.zeros(len(weights))
     # Loop range is from 1 to horizon. Rebalancing happens from t=1
@@ -249,39 +145,6 @@ def test_integrity(
     hist_bins=None,
     uncertainty_radius=None,
 ):
-    """
-    Validate the integrity and consistency of input portfolio data.
-
-    Parameters
-    ----------
-    tickers : list
-        List of asset tickers.
-    weights : array-like, optional
-        Portfolio weights; must match the number of tickers.
-    cov : array-like, optional
-        Covariance matrix; must be square with size equal to number of tickers and invertible.
-    mean : array-like, optional
-        Expected returns vector; length must match number of tickers.
-    bounds : tuple of two reals, optional
-        Weight bounds in the format (min, max) with min < max and abs(max), abs(min) <= 1.
-    kelly_fraction : float, optional
-        Fraction for Kelly criterion; must be in (0, 1].
-    confidence : float, optional
-        Confidence level for risk measures; must be in (0, 1).
-    volatility_array : array-like, optional
-        Asset volatilities; length must match number of tickers and all values > 0.
-    hist_bins : int, optional
-        Number of histogram bins; must be a positive integer.
-    uncertainty_radius : float, optional
-        Radius for uncertainty sets; must be positive.
-
-    Raises
-    ------
-    DataError
-        If any vector/matrix has incorrect type, length, or shape, or contains invalid values.
-    PortfolioError
-        If any portfolio-specific parameter (kelly_fraction, confidence, uncertainty_radius) is out of bounds.
-    """
     asset_quantity = len(tickers)
     if mean is not None:
         if not all_elements_are_type(np.array(mean).flatten(), Real):

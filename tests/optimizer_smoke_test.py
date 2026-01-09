@@ -11,10 +11,17 @@ import pytest
 import numpy as np
 import pandas as pd
 import yfinance as yf
-import abc
 
-# A stable list of tickers
+# Tickers and statistic fields
 TICKERS = ["AAPL", "MSFT", "GOOG", "AMZN"]
+STAT_FIELDS = [
+    "Tickers",
+    "Weights",
+    "Portfolio Entropy",
+    "Herfindahl Index",
+    "Gini Coefficient",
+    "Absolute Max Weight",
+]
 
 
 # Function to fetch yfinance data
@@ -33,6 +40,7 @@ def returns_df():
     # Computing returns
     # returns are computed using closed prices as mentioned within the documentation
     returns = prices.pct_change().dropna()
+
     # quick check for shape -> length consistency
     assert returns.shape[1] == len(TICKERS)
     return returns
@@ -77,27 +85,66 @@ def test_all_optimizers_smoke(returns_df):
 
     # creating a failure dictionary to conveniently display which optimizer took the hit
     failures = {}
+    stochastic = {}
+    stats_fails = {}
     for cls in optimizers:
-
         # If the optimizer cannot be instantiated, it is skipped
         if not can_instantiate(cls):
             continue
 
         # Trying to optimize
-        # This checks the base, optimization related errors if any
+        # This checks the base optimization related errors if any
         try:
+            # Optimizing two times to compare weights
             opt = cls()
-            result = opt.optimize(returns_df)
+
+            # Checking for seed and weight_bounds, utilizing them if they are present
+            sig = inspect.signature(opt.optimize)
+            kwargs = {}
+            if "seed" in sig.parameters:
+                kwargs["seed"] = 100
+            if "weight_bounds" in sig.parameters:
+                kwargs["weight_bounds"] = (-0.5, 1)
+            first_result = opt.optimize(returns_df, **kwargs)
+            second_result = opt.optimize(returns_df, **kwargs)
+            # Checking if the weights are equal (close) and adding to dictionary of stochastic outputs
+            if not np.allclose(first_result, second_result):
+                stochastic[cls.__name__] = (first_result, second_result)
+
+        # If an optimization error occurs, the optimizer class is added to dictionary along with the error message
         except Exception as e:
             failures[cls.__name__] = str(e)
             continue
 
-        # Checking if the result obtained is invalid (is None or produced NaNs)
-        assert result is not None
-        assert not np.any(np.isnan(result)), f"{cls.__name__} produced NaNs"
+        # Trying to compute statistics
+        try:
+            statistics = opt.stats()
+            # Adding to stats_fails dictionary if any statistics are missing with custom message
+            missing = [i for i in STAT_FIELDS if i not in statistics]
+            if missing:
+                stats_fails[cls.__name__] = f"Missing fields: {missing}"
 
-    # Raising errors if failures exist, while displaying the optimizer possessing the error
-    if failures:
-        raise AssertionError(
-            "Optimizers failed:\n" + "\n".join(f"{k}: {v}" for k, v in failures.items())
-        )
+        # If statistics fail to be computed, it is added to stats_fails
+        except Exception as e:
+            stats_fails[cls.__name__] = str(e)
+
+        # Checking if the result obtained is valid
+        assert first_result is not None, f"{cls.__name__} did not produce weights"
+        assert not np.any(np.isnan(first_result)), f"{cls.__name__} produced NaNs"
+        assert (
+            first_result.shape[0] == returns_df.shape[1]
+        ), f"{cls.__name__} produced invalid weights shape"
+        assert np.all(
+            np.isfinite(first_result)
+        ), f"{cls.__name__} produced infinite weights"
+
+    # Checking for failures, non-deterministic optimizers and statistic failures
+    assert not failures, "Optimizers failed to compute weights:\n" + "\n".join(
+        f"{k}: {v}" for k, v in failures.items()
+    )
+    assert not stochastic, "Optimizers produced stochastic weights:\n" + "\n".join(
+        f"{k}: {v}" for k, v in stochastic.items()
+    )
+    assert not stats_fails, "Optimizers failed to compute statistics:\n" + "\n".join(
+        f"{k}: {v}" for k, v in stats_fails.items()
+    )

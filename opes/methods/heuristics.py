@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize
+from scipy.optimize import minimize, differential_evolution
 
 from opes.methods.base_optimizer import Optimizer
 from ..utils import extract_trim, find_regularizer, test_integrity, find_constraint
@@ -166,10 +166,13 @@ class MaxDiversification(Optimizer):
 
     def __init__(self, reg=None, strength=0):
         """
-        Initializes the MaxDiversification optimizer.
+        Initializes the maximum diversification optimizer
 
-        :param reg: A regularization function or name.
-        :param strength: Scalar multiplier for the regularization penalty.
+        Args:
+            reg (str, optional): A regularization name.
+                                                Defaults to None.
+            strength (float, optional): Regularization strength.
+                                                Defaults to `0`.
         """
         self.identity = "maxdiverse"
         self.reg = find_regularizer(reg)
@@ -180,12 +183,11 @@ class MaxDiversification(Optimizer):
         self.tickers = None
         self.weights = None
 
-    def prepare_optimization_inputs(self, data, weight_bounds, w, custom_cov=None):
+    def prepare_optimization_inputs(self, data, w, custom_cov=None):
         """
         Extracts returns and calculates the covariance matrix and per-asset volatility.
 
         :param data: Input OHLCV data grouped by ticker.
-        :param weight_bounds: Tuple of (min_weight, max_weight).
         :param w: Initial weights.
         :param custom_cov: Custom covariance from the user.
         """
@@ -214,38 +216,34 @@ class MaxDiversification(Optimizer):
             tickers=self.tickers,
             weights=self.weights,
             cov=self.covariance,
-            bounds=weight_bounds,
             volatility_array=self.volarray,
         )
 
-    def optimize(self, data=None, weight_bounds=(0, 1), w=None, custom_cov=None):
+    def optimize(self, data=None, w=None, custom_cov=None, seed=100):
         """
         Executes the Maximum Diversification optimization.
 
         :param data: Input data for optimization.
-        :param weight_bounds: Boundary constraints for asset weights.
         :param w: Initial weight vector.
         :return: Optimized weight vector.
         :raises OptimizationError: If the SLSQP solver fails.
         :param custom_cov: Custom covariance matrix from the user.
         """
         # Preparing optimization and finding constraint
-        self.prepare_optimization_inputs(data, weight_bounds, w, custom_cov=custom_cov)
-        constraint = find_constraint(weight_bounds)
-        w = self.weights
+        self.prepare_optimization_inputs(data, w, custom_cov=custom_cov)
 
         # Optimization objective and results
         def f(w):
-            var = w @ self.covariance @ w
+            w = w / (w.sum() + 1e-10)
+            var = (w @ self.covariance @ w + 1e-10)
             weightvol = w @ self.volarray
             return -(weightvol / np.sqrt(var)) + self.strength * self.reg(w)
-
-        result = minimize(
+        
+        result = differential_evolution(
             f,
-            w,
-            method="SLSQP",
-            bounds=[weight_bounds] * len(w),
-            constraints=constraint,
+            strategy='randtobest1bin',
+            bounds=[(0,1) for _ in range(len(self.weights))],
+            rng=seed
         )
         if result.success:
             self.weights = result.x
