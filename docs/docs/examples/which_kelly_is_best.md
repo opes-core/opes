@@ -21,8 +21,8 @@ import yfinance as yf
 from  tabulate import tabulate # Optional, for nice display
 
 # OPES modules
-from opes.methods.utility_theory import Kelly
-from opes.methods.distributionally_robust import KLRobustKelly
+from opes.objectives.utility_theory import Kelly
+from opes.objectives.distributionally_robust import KLRobustKelly
 from opes.backtester import Backtester
 ```
 

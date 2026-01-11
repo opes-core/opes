@@ -1,9 +1,10 @@
 """
-OPES contains a portfolio backtesting engine using a supplied optimizer. 
-The method supports both static and rolling portfolio construction, 
-applies transaction costs and enforces strict no-lookahead constraints during rebalancing.
+OPES contains a portfolio backtesting engine inclusive of a simple plotting function 
+using a supplied optimizer. The method supports both static and rolling portfolio 
+construction, applies transaction costs and enforces strict no-lookahead 
+constraints during rebalancing.
 
-The backtest operates exclusively on the test dataset while ensuring that 
+The backtest operates exclusively on the test dataset while ensuring that
 all portfolio decisions are made using only information available at the time of execution.
 
 ---
@@ -68,7 +69,7 @@ class Backtester:
             ```
             - NaN values in both `train_data` and `test_data` are automatically dropped to prevent indexing errors during backtests. So Assets with shorter trading histories truncate the dataset.
             - After cleaning/truncation, close prices are extracted per asset. Returns are computed as:
-            
+
             $$R_t = \\frac{P^{(t)}}{P^{(t-1)}} - 1$$
 
         ---
@@ -160,10 +161,10 @@ class Backtester:
         is considered to be original and kept.
 
         !!! warning "Warning:"
-            Some online learning methods such as `ExponentialGradient` update weights based 
-            on the most recent observations. Setting `rebalance_freq` to any value other 
-            than `1` (or possibly `None`) may result in suboptimal performance, as 
-            intermediate data points will be ignored and not used for weight updates. 
+            Some online learning methods such as `ExponentialGradient` update weights based
+            on the most recent observations. Setting `rebalance_freq` to any value other
+            than `1` (or possibly `None`) may result in suboptimal performance, as
+            intermediate data points will be ignored and not used for weight updates.
             Proceed with caution when using other rebalancing frequencies with online learning algorithms.
 
         Args:
@@ -174,10 +175,10 @@ class Backtester:
 
         **Returns:**
 
-        - `dict`: Backtest results containing:
-            - 'returns' (*np.ndarray*): Portfolio returns after accounting for costs.
-            - 'weights' (*np.ndarray*): Portfolio weights at each timestep.
-            - 'costs' (*np.ndarray*): Transaction costs applied at each timestep.
+        - `dict`: Backtest results containing the following keys:
+            - `'returns'` (*np.ndarray*): Portfolio returns after accounting for costs.
+            - `'weights'` (*np.ndarray*): Portfolio weights at each timestep.
+            - `'costs'` (*np.ndarray*): Transaction costs applied at each timestep.
 
         Raises:
             DataError: If the optimizer does not accept weight bounds but `weight_bounds` are provided.
@@ -195,7 +196,7 @@ class Backtester:
             import numpy as np
 
             # Importing necessary OPES modules
-            from opes.methods.utility_theory import Kelly
+            from opes.objectives.utility_theory import Kelly
             from opes.backtester import Backtester
 
             # Place holder for your price data
@@ -218,7 +219,7 @@ class Backtester:
             for key in kelly_backtest:
               print(f"{key}: {kelly_backtest}")
             ```
-        
+
         ---
         """
         # Running backtester integrity checks
@@ -327,27 +328,27 @@ class Backtester:
         **Returns:**
 
         - `dict`: Dictionary of performance metrics with the following keys:
-            - `sharpe`: Sharpe ratio.
-            - `sortino`: Sortino ratio.
-            - `volatility`: Standard deviation of returns (%).
-            - `mean_return`: Mean return (%).
-            - `total_return`: Total cumulative return (%).
-            - `max_drawdown`: Maximum drawdown.
-            - `var_95`: Value at Risk at 95% confidence level.
-            - `cvar_95`: Conditional Value at Risk (expected shortfall) at 95%.
-            - `skew`: Skewness of returns.
-            - `kurtosis`: Kurtosis of returns.
-            - `omega_0`: Omega ratio (gain/loss ratio).
+            - `'sharpe'`: Sharpe ratio.
+            - `'sortino'`: Sortino ratio.
+            - `'volatility'`: Standard deviation of returns (%).
+            - `'mean_return'`: Mean return (%).
+            - `'total_return'`: Total cumulative return (%).
+            - `'max_drawdown'`: Maximum drawdown.
+            - `'var_95'`: Value at Risk at 95% confidence level.
+            - `'cvar_95'`: Conditional Value at Risk (expected shortfall) at 95%.
+            - `'skew'`: Skewness of returns.
+            - `'kurtosis'`: Kurtosis of returns.
+            - `'omega_0'`: Omega ratio (gain/loss ratio).
 
         !!! note "Notes:"
             - Volatility, mean, total return, VaR and CVaR are scaled to percentages.
             - Tail risk metrics (VaR, CVaR) are based on the lower 5% of returns.
             - Returns should be cleaned (NaNs removed) before passing to this method.
-        
+
         !!! example "Example:"
             ```python
             # Importing portfolio method and backtester
-            from opes.methods.markowitz import MaxSharpe
+            from opes.objectives.markowitz import MaxSharpe
             from opes.backtester import Backtester
 
             # Place holder for your price data
@@ -422,7 +423,7 @@ class Backtester:
 
     def plot_wealth(self, returns_dict, initial_wealth=1.0, savefig=False):
         """
-        OPES ships with a basic plotting utility for visualizing portfolio wealth over time. 
+        OPES ships with a basic plotting utility for visualizing portfolio wealth over time.
 
         This method exists for quick inspection and debugging, not for deep performance analysis.
         It visualizes cumulative wealth for one or multiple strategies
@@ -430,8 +431,8 @@ class Backtester:
         and optional saving of the plot to a file.
 
         !!! tip "Recommendation:"
-            For serious research, reporting, or strategy comparison, we strongly recommend writing your own custom plotting pipeline. 
-            Real evaluation usually needs rolling Sharpe, drawdowns, volatility regimes, benchmark overlays and other diagnostics that 
+            For serious research, reporting, or strategy comparison, we strongly recommend writing your own custom plotting pipeline.
+            Real evaluation usually needs rolling Sharpe, drawdowns, volatility regimes, benchmark overlays and other diagnostics that
             go far beyond a single equity curve.
 
         Args:
@@ -445,31 +446,31 @@ class Backtester:
             - Plots each strategy's wealth trajectory on a logarithmic y-axis.
             - Adds a horizontal breakeven line at the initial wealth.
             - Displays the plot and optionally saves it to a PNG file.
-        
+
         !!! example "Example:"
             ```python
             # Importing portfolio methods and backtester
-            from opes.methods.markowitz import MaxMean, MeanVariance
+            from opes.objectives.markowitz import MaxMean, MeanVariance
             from opes.backtester import Backtester
-            
+
             # Place holder for your price data
             from some_random_module import trainData, testData
-            
+
             # Declare train and test data
             training = trainData()
             testing = testData()
-            
+
             # Declare two optimizers
             maxmeanl2 = MaxMean(reg="l2", strength=0.001)
             mvo1_5 = MeanVariance(risk_aversion=1.5)
-            
+
             # Initializing Backtest with constant costs
             tester = Backtester(train_data=training, test_data=testing)
-            
+
             # Obtaining returns array from backtest for both optimizers (Monthly Rebalancing)
             scenario_1 = tester.backtest(optimizer=maxmeanl2, rebalance_freq=21)['returns']
             scenario_2 = tester.backtest(optimizer=mvo1_5, rebalance_freq=21)['returns']
-            
+
             # Plotting wealth
             tester.plot_wealth(
                 {

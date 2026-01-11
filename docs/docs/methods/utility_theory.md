@@ -27,7 +27,7 @@ where $\gamma$ is the risk aversion parameter.
 
 **Usage:**
 ```python
-from opes.methods.utility_theory import QuadraticUtility
+from opes.objectives.utility_theory import QuadraticUtility
 
 # Initialize portfolio with risk aversion parameter
 utility = QuadraticUtility(risk_aversion=0.5)
@@ -47,7 +47,7 @@ where $\alpha > 0$ is the absolute risk aversion coefficient.
 
 **Usage:**
 ```python
-from opes.methods.utility_theory import CARA
+from opes.objectives.utility_theory import CARA
 
 # Initialize with absolute risk aversion coefficient
 utility = CARA(risk_aversion=0.01)
@@ -94,7 +94,7 @@ where $\gamma \neq 1$ is the risk aversion parameter, and $a, b$ are parameters 
 
 **Usage:**
 ```python
-from opes.methods.utility_theory import HARA
+from opes.objectives.utility_theory import HARA
 
 # Initialize with HARA parameters
 utility = HARA(risk_aversion=2.0, scale=1.0, shift=1.2)
@@ -121,7 +121,7 @@ where $\mathbf{w}$ is the vector of portfolio weights, $\mathbf{r}$ is the vecto
 
 **Usage:**
 ```python
-from opes.methods.utility_theory import Kelly
+from opes.objectives.utility_theory import Kelly
 
 # Initialize Kelly optimizer with fractional exposure
 kelly = Kelly(fraction=0.85)

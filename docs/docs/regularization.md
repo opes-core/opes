@@ -20,7 +20,7 @@ When initializing a portfolio, you can specify a regularizer via the `reg` argum
 
 ```python
 # Import the portfolio class
-from opes.methods.utility_theory import CRRA
+from opes.objectives.utility_theory import CRRA
 
 # Initialize with L-infinity regularizer and a strength of 0.05
 CRRA_reg = CRRA(risk_aversion=1.7, reg='l-inf', strength=0.05)
@@ -68,7 +68,7 @@ $$
 **Example Usage**
 
 ```python
-from opes.methods.markowitz import MaxMean
+from opes.objectives.markowitz import MaxMean
 optimizer = MaxMean(reg="l1", strength=0.01)
 ```
 
@@ -86,7 +86,7 @@ $$
 **Example Usage**
 
 ```python
-from opes.methods.markowitz import MaxMean
+from opes.objectives.markowitz import MaxMean
 optimizer = MaxMean(reg="l2", strength=0.01)
 ```
 
@@ -105,7 +105,7 @@ $$
 **Example Usage**
 
 ```python
-from opes.methods.markowitz import MaxMean
+from opes.objectives.markowitz import MaxMean
 optimizer = MaxMean(reg="l-inf", strength=0.01)
 ```
 
@@ -123,7 +123,7 @@ $$
 **Example Usage**
 
 ```python
-from opes.methods.markowitz import MaxMean
+from opes.objectives.markowitz import MaxMean
 optimizer = MaxMean(reg="entropy", strength=0.01)
 ```
 
@@ -141,7 +141,7 @@ $$
 **Example Usage**
 
 ```python
-from opes.methods.markowitz import MaxMean
+from opes.objectives.markowitz import MaxMean
 optimizer = MaxMean(reg="variance", strength=0.01)
 ```
 
@@ -161,6 +161,6 @@ $$
 **Example Usage**
 
 ```python
-from opes.methods.markowitz import MaxMean
+from opes.objectives.markowitz import MaxMean
 optimizer = MaxMean(reg="mpad", strength=0.01)
 ```

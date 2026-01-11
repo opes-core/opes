@@ -13,7 +13,7 @@ import time
 import yfinance as yf
 
 # OPES modules
-from opes.methods.markowitz import MeanVariance
+from opes.objectives.markowitz import MeanVariance
 from opes.backtester import Backtester
 ```
 

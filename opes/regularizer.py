@@ -1,6 +1,7 @@
 import numpy as np
 from opes.errors import PortfolioError
 
+
 # Regularizer finding function
 def find_regularizer(reg):
     regularizer = {

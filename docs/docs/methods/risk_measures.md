@@ -30,7 +30,7 @@ $$\text{CVaR}_\alpha(\mathbf{w}) = \mathbb{E}[-\mathbf{w}^\top \mathbf{r} \mid -
 
 **Usage:**
 ```python
-from opes.methods.risk_metrics import CVaR
+from opes.objectives.risk_metrics import CVaR
 
 # Initialize with confidence level
 cvar = CVaR(confidence=0.95)
@@ -52,7 +52,7 @@ subject to $\mathbf{w}^\top \mathbf{1} = 1$, where $\gamma > 0$ is the risk aver
 
 **Usage:**
 ```python
-from opes.methods.risk_metrics import MeanCVaR
+from opes.objectives.risk_metrics import MeanCVaR
 
 # Initialize with risk aversion and confidence level
 mean_cvar = MeanCVaR(risk_aversion=1.0, confidence=0.95)
@@ -78,7 +78,7 @@ $$\text{EVaR}_\alpha(\mathbf{w}) = \min_{w, s \gt 0} \left\{ \frac{1}{s} \ln \le
 
 **Usage:**
 ```python
-from opes.methods.risk_metrics import EVaR
+from opes.objectives.risk_metrics import EVaR
 
 # Initialize with tail confidence
 evar = EVaR(confidence=0.8)
@@ -101,7 +101,7 @@ subject to $\mathbf{w}^\top \mathbf{1} = 1$, where $\gamma > 0$ is the risk aver
 
 **Usage:**
 ```python
-from opes.methods.risk_metrics import MeanEVaR
+from opes.objectives.risk_metrics import MeanEVaR
 
 # Initialize with risk aversion and tail confidence
 mean_evar = MeanEVaR(risk_aversion=1.0, confidence=0.8)

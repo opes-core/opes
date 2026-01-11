@@ -25,7 +25,7 @@ OPES is a research-oriented and experimentation-focused Python module for portfo
     # Demonstration of portfolio optimization using the Kelly Criterion
     # 'data' represents OHLCV market data grouped by ticker symbols
     
-    from opes.methods.utility_theory import Kelly
+    from opes.objectives.utility_theory import Kelly
     
     # Initialize a Kelly portfolio with fractional exposure and L2 regularization
     kelly_portfolio = Kelly(fraction=0.8, reg="l2", strength=0.01)

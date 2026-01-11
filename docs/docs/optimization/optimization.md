@@ -67,7 +67,7 @@ optimize(self, data=None, weight_bounds=(0,1), w=None, ...)
 ## Usage Example
 
 ```python
-from opes.methods.markowitz import MeanVariance
+from opes.objectives.markowitz import MeanVariance
 from some_random_module import customCovariance, customMean
 from data_module import data
 

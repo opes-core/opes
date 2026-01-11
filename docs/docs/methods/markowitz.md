@@ -29,7 +29,7 @@ subject to $\mathbf{w}^\top \mathbf{1} = 1$.
 
 **Usage:**
 ```python
-from opes.methods.markowitz import MaxMean
+from opes.objectives.markowitz import MaxMean
 
 # Initialize maximum mean optimizer
 max_mean = MaxMean()
@@ -49,7 +49,7 @@ subject to $\mathbf{w}^\top \mathbf{1} = 1$.
 
 **Usage:**
 ```python
-from opes.methods.markowitz import MinVariance
+from opes.objectives.markowitz import MinVariance
 
 # Initialize GMV optimizer
 gmv = MinVariance()
@@ -73,7 +73,7 @@ subject to $\mathbf{w}^\top \mathbf{1} = 1$, where $\gamma$ is the risk aversion
 
 **Usage:**
 ```python
-from opes.methods.markowitz import MeanVariance
+from opes.objectives.markowitz import MeanVariance
 
 # Initialize with risk aversion parameter
 mv = MeanVariance(risk_aversion=1.0)
@@ -93,7 +93,7 @@ subject to $\mathbf{w}^\top \mathbf{1} = 1$, where $r_f$ is the risk-free rate.
 
 **Usage:**
 ```python
-from opes.methods.markowitz import MaxSharpe
+from opes.objectives.markowitz import MaxSharpe
 
 # Initialize with risk-free rate
 max_sharpe = MaxSharpe(risk_free=0.02)

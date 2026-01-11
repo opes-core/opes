@@ -46,17 +46,17 @@ def returns_df():
     return returns
 
 
-# Function to discover various optimizer classes within opes.methods
+# Function to discover various optimizer classes within opes.objectives
 # We return a list of classes which has the attribute/method 'optimize'
 def discover_optimizer_classes():
-    import opes.methods as methods_pkg
+    import opes.objectives as methods_pkg
 
     classes = []
     for _, name, _ in pkgutil.iter_modules(methods_pkg.__path__):
-        mod = importlib.import_module(f"opes.methods.{name}")
+        mod = importlib.import_module(f"opes.objectives.{name}")
         for _, obj in inspect.getmembers(mod, inspect.isclass):
             if (
-                obj.__module__.startswith("opes.methods")
+                obj.__module__.startswith("opes.objectives")
                 and hasattr(obj, "optimize")
                 and not inspect.isabstract(obj)
             ):

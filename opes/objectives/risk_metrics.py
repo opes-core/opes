@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 
-from opes.methods.base_optimizer import Optimizer
-from ..utils import extract_trim, find_regularizer, test_integrity, find_constraint
+from opes.objectives.base_optimizer import Optimizer
+from ..regularizer import find_regularizer
+from ..utils import extract_trim, test_integrity, find_constraint
 from ..errors import OptimizationError, PortfolioError
 
 

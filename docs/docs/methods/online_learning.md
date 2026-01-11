@@ -26,7 +26,7 @@ where $\mathbf{x}_t$ is the vector of price relatives (gross returns) at time $t
 
 **Usage:**
 ```python
-from opes.methods.online import BCRP
+from opes.objectives.online import BCRP
 
 # Initialize BCRP (for FTL)
 ftl = BCRP()
@@ -55,7 +55,7 @@ where $\mathbf{w}_{i,t}$ is the weight of asset $i$ at time $t$, $\mathbf{r}_{i,
 
 **Usage:**
 ```python
-from opes.methods.online import ExponentialGradient
+from opes.objectives.online import ExponentialGradient
 
 # Initialize with learning rate
 eg = ExponentialGradient(learning_rate=0.02)

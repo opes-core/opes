@@ -13,8 +13,8 @@ For this example, we require `time`, `yfinance` and `opes`.
 import time
 import yfinance as yf
 
-from opes.methods.markowitz import MeanVariance
-from opes.methods.heuristics import Uniform
+from opes.objectives.markowitz import MeanVariance
+from opes.objectives.heuristics import Uniform
 from opes.backtester import Backtester
 ```
 

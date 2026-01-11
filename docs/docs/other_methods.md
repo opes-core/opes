@@ -19,7 +19,7 @@ set_regularizer(self, reg=None, strength=1)
 ### Usage Example
 
 ```python
-from opes.methods.markowitz import MaxMean
+from opes.objectives.markowitz import MaxMean
 from some_random_module import return_data
 
 # Declaring optimizer with L2 regularizer
@@ -77,7 +77,7 @@ A dictionary containing asset identifiers, optimized weights, and concentration 
 
 ```python
 # Import a portfolio method from OPES
-from opes.methods.markowitz import MeanVariance
+from opes.objectives.markowitz import MeanVariance
 from some_random_module import data
 
 # Initialize and optimize
@@ -128,7 +128,7 @@ clean_weights(self, threshold=1e-8)
 
 ```python
 # Import a portfolio method from OPES
-from opes.methods.markowitz import MeanVariance
+from opes.objectives.markowitz import MeanVariance
 from some_random_module import data
 
 # Initialize and optimize

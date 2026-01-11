@@ -67,7 +67,7 @@ It also stores transaction cost parameters for portfolio simulations.
 
 ## Methods
 
-### Running the Backtest
+### `backtest`
 
 ```python
 def backtest(
@@ -104,10 +104,10 @@ is considered to be original and kept.
 
 **Returns:**
 
-- `dict`: Backtest results containing:
-    - 'returns' (*np.ndarray*): Portfolio returns after accounting for costs.
-    - 'weights' (*np.ndarray*): Portfolio weights at each timestep.
-    - 'costs' (*np.ndarray*): Transaction costs applied at each timestep.
+- `dict`: Backtest results containing the following keys:
+    - `'returns'` (*np.ndarray*): Portfolio returns after accounting for costs.
+    - `'weights'` (*np.ndarray*): Portfolio weights at each timestep.
+    - `'costs'` (*np.ndarray*): Transaction costs applied at each timestep.
 
 **Raises**
 
@@ -127,7 +127,7 @@ is considered to be original and kept.
     import numpy as np
 
     # Importing necessary OPES modules
-    from opes.methods.utility_theory import Kelly
+    from opes.objectives.utility_theory import Kelly
     from opes.backtester import Backtester
 
     # Place holder for your price data
@@ -153,7 +153,7 @@ is considered to be original and kept.
 
 ---
 
-### Performance Metrics
+### `get_metrics`
 
 ```python
 def get_metrics(returns)
@@ -172,17 +172,17 @@ commonly used in finance, including volatility, drawdowns, and tail risk metrics
 **Returns:**
 
 - `dict`: Dictionary of performance metrics with the following keys:
-    - `sharpe`: Sharpe ratio.
-    - `sortino`: Sortino ratio.
-    - `volatility`: Standard deviation of returns (%).
-    - `mean_return`: Mean return (%).
-    - `total_return`: Total cumulative return (%).
-    - `max_drawdown`: Maximum drawdown.
-    - `var_95`: Value at Risk at 95% confidence level.
-    - `cvar_95`: Conditional Value at Risk (expected shortfall) at 95%.
-    - `skew`: Skewness of returns.
-    - `kurtosis`: Kurtosis of returns.
-    - `omega_0`: Omega ratio (gain/loss ratio).
+    - `'sharpe'`: Sharpe ratio.
+    - `'sortino'`: Sortino ratio.
+    - `'volatility'`: Standard deviation of returns (%).
+    - `'mean_return'`: Mean return (%).
+    - `'total_return'`: Total cumulative return (%).
+    - `'max_drawdown'`: Maximum drawdown.
+    - `'var_95'`: Value at Risk at 95% confidence level.
+    - `'cvar_95'`: Conditional Value at Risk (expected shortfall) at 95%.
+    - `'skew'`: Skewness of returns.
+    - `'kurtosis'`: Kurtosis of returns.
+    - `'omega_0'`: Omega ratio (gain/loss ratio).
 
 !!! note "Notes:"
     - Volatility, mean, total return, VaR and CVaR are scaled to percentages.
@@ -192,7 +192,7 @@ commonly used in finance, including volatility, drawdowns, and tail risk metrics
 !!! example "Example:"
     ```python
     # Importing portfolio method and backtester
-    from opes.methods.markowitz import MaxSharpe
+    from opes.objectives.markowitz import MaxSharpe
     from opes.backtester import Backtester
 
     # Place holder for your price data
@@ -218,7 +218,7 @@ commonly used in finance, including volatility, drawdowns, and tail risk metrics
 
 ---
 
-### Plotting Wealth Process
+### `plot_wealth`
 
 ```python
 def plot_wealth(returns_dict, initial_wealth=1.0, savefig=False)
@@ -253,7 +253,7 @@ and optional saving of the plot to a file.
 !!! example "Example:"
     ```python
     # Importing portfolio methods and backtester
-    from opes.methods.markowitz import MaxMean, MeanVariance
+    from opes.objectives.markowitz import MaxMean, MeanVariance
     from opes.backtester import Backtester
     
     # Place holder for your price data

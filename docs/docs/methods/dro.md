@@ -44,7 +44,7 @@ $$\min_{\mathbf{w}, \alpha \geq 0} \ \alpha \log \mathbb{E}_{\hat{\mathbb{P}}}[e
 
 **Usage:**
 ```python
-from opes.methods.distributionally_robust import KLRobustMaxMean
+from opes.objectives.distributionally_robust import KLRobustMaxMean
 
 # Initialize with KL divergence radius
 kl_maxmean = KLRobustMaxMean(radius=0.02)
@@ -102,8 +102,8 @@ subject to $\mathbf{w}^\top \mathbf{1} = 1$, where $\|\cdot\|_*$ is the dual nor
 
 **Usage:**
 ```python
-from opes.methods.distributionally_robust import WassRobustMaxMean
-from opes.methods.markowitz import MaxMean
+from opes.objectives.distributionally_robust import WassRobustMaxMean
+from opes.objectives.markowitz import MaxMean
 
 # Initialize with Wasserstein radius and ground_norm
 wass_maxmean = WassRobustMaxMean(radius=0.01, ground_norm=2)

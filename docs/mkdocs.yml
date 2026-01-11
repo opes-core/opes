@@ -42,7 +42,8 @@ extra_javascript:
 nav:
   - Home: index.md
   - Installation: installation.md
-  - Methods:
+  - Common Methods: common_methods.md
+  - Objectives:
       - Utility Theory: methods/utility_theory.md
       - Markowitz: methods/markowitz.md
       - Principled Heuristics: methods/heuristics.md
@@ -50,10 +51,6 @@ nav:
       - Online Learning: methods/online_learning.md
       - Distributionally Robust: methods/dro.md
   - Regularization: regularization.md
-  - Portfolio Optimization: 
-      - Data Ingestion: optimization/data_ingestion.md
-      - Optimization: optimization/optimization.md
-  - Other Optimizer Methods: other_methods.md
   - Backtesting: backtesting.md
   - Examples:
       - A Good Strategy: examples/good_strategy.md

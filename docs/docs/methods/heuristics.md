@@ -17,7 +17,7 @@ $$w_i = \frac{1}{N} \quad \text{for } i = 1, \ldots, N$$
 
 **Usage:**
 ```python
-from opes.methods.heuristics import Uniform
+from opes.objectives.heuristics import Uniform
 
 # Initialize equal weight portfolio
 ew = Uniform()
@@ -43,7 +43,7 @@ subject to $\mathbf{w}^\top \mathbf{1} = 1$.
 
 **Usage:**
 ```python
-from opes.methods.heuristics import RiskParity
+from opes.objectives.heuristics import RiskParity
 
 # Initialize risk parity optimizer
 rp = RiskParity()
@@ -63,7 +63,7 @@ where $\sigma_i = \sqrt{\Sigma_{ii}}$ is the volatility of asset $i$.
 
 **Usage:**
 ```python
-from opes.methods.heuristics import InverseVolatility
+from opes.objectives.heuristics import InverseVolatility
 
 # Initialize inverse volatility portfolio
 iv = InverseVolatility()
