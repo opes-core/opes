@@ -1,0 +1,65 @@
+/* Make all text bold globally */
+h1 {
+    font-weight: 600 !important;
+    color: #fff !important;
+}
+
+/*Font colors, for all text types*/
+h1, h2, h3, h4, h5, ul, li, code, table, p {
+    color: #F2F2F2 !important;
+}
+
+/*Math block font colors. Inline and display*/
+.arithmatex {
+    color: #D6D6D6 !important;
+}
+
+/*Secondary Text
+
+Primary text is changed via mkdocs.yml file
+*/
+.md-ellipsis {
+    font-family: Math;
+}
+
+/*Active Link color change*/
+.md-nav__link--active {
+    color: #fc8a68 !important;
+}
+
+/*Code blocks customization (inline and display)*/
+code {
+    background-color: #181818 !important;
+    border: 1px solid #252525;
+}
+.md-code__button {
+    background-color: #181818 !important;
+}
+.md-code__nav {
+    background-color: #181818 !important;
+}
+
+/*Background color and footer color*/
+:root > * {
+    /*Background Color*/
+    --md-default-bg-color: #0E0E0E;
+
+    /* Footer */
+    --md-footer-bg-color: #0E0E0E;
+    --md-footer-bg-color--dark: #0E0E0E;
+}
+
+/*Navigation bar background color change*/
+.md-header {
+    background-color: #0E0E0E !important;
+}
+
+/*Changing Selection background and foreground*/
+::selection {
+  background: transparent;
+  color: #FF6E40;
+}
+::-moz-selection {
+  background: transparent;
+  color: #FF6E40;
+}

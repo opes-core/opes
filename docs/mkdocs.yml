@@ -1,0 +1,65 @@
+site_name: OPES
+
+theme:
+  name: material
+  font: 
+    text: Arial
+  favicon: assets/logos/favicon.ico
+  show_stargazers: false
+  logo: assets/logos/logo.svg
+  palette: 
+    scheme: slate
+    primary: black
+    accent: deep orange
+  features:
+    - content.code.copy
+
+copyright: © 2026 Nitin Tony Paul
+repo_url: https://github.com/opes-core/
+
+markdown_extensions:
+  - fenced_code
+  - admonition
+  - codehilite
+  - pymdownx.blocks.details
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      use_pygments: true
+      pygments_style: one-dark
+      noclasses: true
+
+extra:
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Methods:
+      - Utility Theory: methods/utility_theory.md
+      - Markowitz: methods/markowitz.md
+      - Principled Heuristics: methods/heuristics.md
+      - Risk Measures: methods/risk_measures.md
+      - Online Learning: methods/online_learning.md
+      - Distributionally Robust: methods/dro.md
+  - Regularization: regularization.md
+  - Portfolio Optimization: 
+      - Data Ingestion: optimization/data_ingestion.md
+      - Optimization: optimization/optimization.md
+  - Other Optimizer Methods: other_methods.md
+  - Backtesting: backtesting.md
+  - Examples:
+      - A Good Strategy: examples/good_strategy.md
+      - If You Knew the Future: examples/if_you_knew_the_future.md
+      - Which Kelly is Best?: examples/which_kelly_is_best.md
+  - Resources: 
+      - Developer's Note: resources/devnote.md
+      - License: resources/license.md
+      - References: resources/references.md

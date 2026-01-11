@@ -59,9 +59,7 @@ def extract_trim(data):
 # Optimization constraints finding function
 def find_constraint(bounds, constraint_type=1):
     constraint_list = []
-    if bounds[0] < 0 and bounds[1] > 0:
-        shift = 0
-    elif bounds[1] < 0:
+    if bounds[1] < 0:
         shift = 1
     else:
         shift = -1

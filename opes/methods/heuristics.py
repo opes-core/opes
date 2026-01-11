@@ -225,9 +225,10 @@ class MaxDiversification(Optimizer):
 
         :param data: Input data for optimization.
         :param w: Initial weight vector.
+        :param custom_cov: Custom covariance matrix from the user.
+        :param seed: seed for differential evolution solver.
         :return: Optimized weight vector.
         :raises OptimizationError: If the SLSQP solver fails.
-        :param custom_cov: Custom covariance matrix from the user.
         """
         # Preparing optimization and finding constraint
         self.prepare_optimization_inputs(data, w, custom_cov=custom_cov)
