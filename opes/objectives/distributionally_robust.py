@@ -1,3 +1,20 @@
+"""
+Distributionally robust optimization (DRO) addresses a fundamental challenge in portfolio management:
+the true distribution of asset returns is unknown and estimates from historical data are subject to
+sampling error. Rather than optimizing with respect to a single estimated distribution which can lead
+to severe out-of-sample underperformance when the estimate is poor, DRO optimizes against the worst-case
+distribution within an ambiguity set of plausible distributions centered around an empirical or reference
+distribution.
+
+OPES leverages dual formulations of selected DRO variants, reducing the resulting problems to tractable,
+and in many cases, convex minimization programs. This includes formulations drawn from both established
+literature and recent, cutting-edge work, some of which may not yet be fully peer-reviewed. While several
+dual representations are well-known (e.g. the Kantorovich-Rubinstein duality), others remain comparatively
+less visible in the existing literature.
+
+---
+"""
+
 from numbers import Real
 import numpy as np
 import pandas as pd
@@ -10,18 +27,19 @@ from ..errors import OptimizationError, PortfolioError
 
 class KLRobustMaxMean(Optimizer):
     """
-    Distributionally Robust Maximum Mean Optimizer (Kullback-Leibler Ambiguity).
+    Kullback-Leibler Ambiguity Maximum Mean Optimization.
 
     Optimizes the expected return under the worst-case probability distribution
-    within a KL-divergence uncertainty ball (radius) around the empirical distribution.
+    within a KL-divergence uncertainty ball (radius) around the empirical distribution. This problem was
+    analyzed by Hu and Hong in their comprehensive study of KL-constrained distributionally robust
+    optimization, who showed it admits a tractable convex reformulation through Fenchel duality
+    and change-of-measure techniques.
     """
 
-    def __init__(self, radius=0.2):
+    def __init__(self, radius=0.01):
         """
-        Initializes the Distributionally Robust Maximum Mean optimizer.
-
-        :param radius: The size of the uncertainty set (KL-divergence radius).
-                       Larger values indicate higher uncertainty.
+        Args:
+            radius (*float, optional*): The size of the uncertainty set (KL-divergence bound). Larger values indicate higher uncertainty. Defaults to `0.01`.
         """
         self.identity = "kldr-mm"
         self.radius = radius
@@ -29,15 +47,7 @@ class KLRobustMaxMean(Optimizer):
         self.tickers = None
         self.weights = None
 
-    def prepare_optimization_inputs(self, data, weight_bounds, w):
-        """
-        Processes data and validates the uncertainty radius for robust optimization.
-
-        :param data: Input OHLCV or return data.
-        :param weight_bounds: Tuple of (min_weight, max_weight).
-        :param w: Initial weight vector.
-        :return: Cleaned return data array.
-        """
+    def _prepare_optimization_inputs(self, data, weight_bounds, w):
         # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
         self.tickers, data = extract_trim(data)
         self.weights = np.array(
@@ -56,19 +66,66 @@ class KLRobustMaxMean(Optimizer):
 
     def optimize(self, data=None, weight_bounds=(0, 1), w=None):
         """
-        Executes the distributionally robust mean optimization.
+        Solves the KL-maximum-mean dual objective:
 
-        Uses a dual reformulation and the log-sum-exp technique to solve for
-        the worst-case expected return.
+        $$
+        \\min_{\\mathbf{w}, \\alpha \\ge 0} \\ \\alpha \\log \\mathbb{E}_{\\mathbb{P}} \\left[e^{\\mathbf{w}^\\top \\mathbf{r} / \\alpha}\\right] + \\alpha \\epsilon
+        $$
 
-        :param data: Input data for optimization.
-        :param weight_bounds: Boundary constraints for asset weights.
-        :param w: Initial weight vector.
-        :return: Optimized weight vector.
-        :raises OptimizationError: If the solver fails to converge.
+        Uses the log-sum-exp technique to solve for the worst-case expected return
+        making the objective numerically stable.
+
+        Args:
+            data (*pd.DataFrame*): Ticker price data in either multi-index or single-index formats. Examples are given below:
+                ```
+                # Single-Index Example
+                Ticker           TSLA      NVDA       GME        PFE       AAPL  ...
+                Date
+                2015-01-02  14.620667  0.483011  6.288958  18.688917  24.237551  ...
+                2015-01-05  14.006000  0.474853  6.460137  18.587513  23.554741  ...
+                2015-01-06  14.085333  0.460456  6.268492  18.742599  23.556952  ...
+                2015-01-07  14.063333  0.459257  6.195926  18.999102  23.887287  ...
+                2015-01-08  14.041333  0.476533  6.268492  19.386841  24.805082  ...
+                ...
+
+                # Multi-Index Example Structure (OHLCV)
+                Columns:
+                + Ticker (e.g. GME, PFE, AAPL, ...)
+                - Open
+                - High
+                - Low
+                - Close
+                - Volume
+                ```
+            weight_bounds (*tuple, optional*): Boundary constraints for asset weights. Values must be of the format `(lesser, greater)` with `0 <= |lesser|, |greater| <= 1`. Defaults to `(0,1)`.
+            w (*None or np.ndarray, optional*): Initial weight vector for warm starts. Mainly used for backtesting and not recommended for user input. Defaults to `None`.
+
+        **Returns:**
+
+        - `np.ndarray`: Vector of optimized portfolio weights.
+
+        Raises:
+            DataError: For any data mismatch during integrity check.
+            PortfolioError: For any invalid portfolio variable inputs during integrity check.
+            OptimizationError: If `SLSQP` solver fails to solve.
+
+        !!! example "Example:"
+            ```python
+            # Importing the dro maximum mean module
+            from opes.objectives.distributionally_robust import KLRobustMaxMean
+
+            # Let this be your ticker data
+            training_data = some_data()
+
+            # Initialize with KL divergence radius
+            kl_maxmean = KLRobustMaxMean(radius=0.02)
+
+            # Optimize portfolio with custom weight bounds
+            weights = kl_maxmean.optimize(data=training_data, weight_bounds=(0.05, 0.75))
+            ```
         """
         # Preparing optimization and finding constraint
-        trimmed_return_data = self.prepare_optimization_inputs(data, weight_bounds, w)
+        trimmed_return_data = self._prepare_optimization_inputs(data, weight_bounds, w)
         constraint = find_constraint(weight_bounds, constraint_type=2)
         param_array = np.append(self.weights, 1)
 
@@ -100,18 +157,22 @@ class KLRobustMaxMean(Optimizer):
 
 class KLRobustKelly(Optimizer):
     """
-    Distributionally Robust Kelly Criterion Optimizer (Kullback-Leibler Ambiguity).
+    Kullback-Leibler Ambiguity Kelly Criterion.
 
     Maximizes the expected logarithmic wealth under the worst-case probability
-    distribution within a specified KL-divergence radius.
+    distribution within a specified KL-divergence radius. The distributionally
+    robust Kelly criterion addresses estimation error in growth-optimal portfolios
+    by maximizing expected log growth against worst-case distributions within a
+    KL ambiguity set. The KL-robust Kelly criterion produces portfolios that are
+    more diversified than the standard Kelly portfolio, trading off some growth
+    rate for robustness against distributional uncertainty.
     """
 
-    def __init__(self, fraction=1, radius=0.2):
+    def __init__(self, fraction=1.0, radius=0.01):
         """
-        Initializes the Distributionally Robust Kelly optimizer.
-
-        :param fraction: The Kelly fraction (leverage) to apply.
-        :param radius: The KL-divergence uncertainty radius.
+        Args:
+            radius (*float, optional*): The size of the uncertainty set (KL-divergence bound). Larger values indicate higher uncertainty. Defaults to `0.01`.
+            fraction (*float, optional*): kelly fractional exposure to the market. Must be within (0,1]. Lower values bet less aggressively. Defaults to `1.0`.
         """
         self.identity = "kldr-kelly"
         self.radius = radius
@@ -120,15 +181,7 @@ class KLRobustKelly(Optimizer):
         self.tickers = None
         self.weights = None
 
-    def prepare_optimization_inputs(self, data, weight_bounds, w):
-        """
-        Extracts tickers and validates robustness parameters and weight constraints.
-
-        :param data: Input OHLCV or return data.
-        :param weight_bounds: Tuple of (min_weight, max_weight).
-        :param w: Initial weight vector.
-        :return: Cleaned return data array.
-        """
+    def _prepare_optimization_inputs(self, data, weight_bounds, w):
         # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
         self.tickers, data = extract_trim(data)
         self.weights = np.array(
@@ -147,19 +200,63 @@ class KLRobustKelly(Optimizer):
 
     def optimize(self, data=None, weight_bounds=(0, 1), w=None):
         """
-        Executes the robust Kelly optimization.
+        Solves the Hu and Hong KL-Kelly dual objective:
 
-        Solves the minimax problem of maximizing log-wealth over the worst-case
-        distribution using a dual variable approach.
+        $$
+        \\min_{\\mathbf{w}, \\alpha \\ge 0} \\ \\alpha \\log \\mathbb{E}_{\\mathbb{P}} \\left[\\left(1 + f \\cdot \\mathbf{w}^\\top \\mathbf{r}\\right)^{-1/\\alpha}\\right] + \\alpha \\epsilon
+        $$
 
-        :param data: Input data for optimization.
-        :param weight_bounds: Boundary constraints for asset weights.
-        :param w: Initial weight vector.
-        :return: Optimized weight vector.
-        :raises OptimizationError: If the optimization fails.
+        Args:
+            data (*pd.DataFrame*): Ticker price data in either multi-index or single-index formats. Examples are given below:
+                ```
+                # Single-Index Example
+                Ticker           TSLA      NVDA       GME        PFE       AAPL  ...
+                Date
+                2015-01-02  14.620667  0.483011  6.288958  18.688917  24.237551  ...
+                2015-01-05  14.006000  0.474853  6.460137  18.587513  23.554741  ...
+                2015-01-06  14.085333  0.460456  6.268492  18.742599  23.556952  ...
+                2015-01-07  14.063333  0.459257  6.195926  18.999102  23.887287  ...
+                2015-01-08  14.041333  0.476533  6.268492  19.386841  24.805082  ...
+                ...
+
+                # Multi-Index Example Structure (OHLCV)
+                Columns:
+                + Ticker (e.g. GME, PFE, AAPL, ...)
+                - Open
+                - High
+                - Low
+                - Close
+                - Volume
+                ```
+            weight_bounds (*tuple, optional*): Boundary constraints for asset weights. Values must be of the format `(lesser, greater)` with `0 <= |lesser|, |greater| <= 1`. Defaults to `(0,1)`.
+            w (*None or np.ndarray, optional*): Initial weight vector for warm starts. Mainly used for backtesting and not recommended for user input. Defaults to `None`.
+
+        **Returns:**
+
+        - `np.ndarray`: Vector of optimized portfolio weights.
+
+        Raises:
+            DataError: For any data mismatch during integrity check.
+            PortfolioError: For any invalid portfolio variable inputs during integrity check.
+            OptimizationError: If `SLSQP` solver fails to solve.
+
+        !!! example "Example:"
+            ```python
+            # Importing the dro Kelly module
+            from opes.objectives.distributionally_robust import KLRobustKelly
+
+            # Let this be your ticker data
+            training_data = some_data()
+
+            # Initialize with custom fractional exposure and KL divergence radius
+            kl_kelly = KLRobustKelly(fraction=0.8, radius=0.02)
+
+            # Optimize portfolio with custom weight bounds
+            weights = kl_kelly.optimize(data=training_data, weight_bounds=(0.05, 0.75))
+            ```
         """
         # Preparing optimization and finding constraint
-        trimmed_return_data = self.prepare_optimization_inputs(data, weight_bounds, w)
+        trimmed_return_data = self._prepare_optimization_inputs(data, weight_bounds, w)
         constraint = find_constraint(weight_bounds, constraint_type=2)
         param_array = np.append(self.weights, 1)
 
@@ -190,25 +287,20 @@ class KLRobustKelly(Optimizer):
 
 class WassRobustMaxMean(Optimizer):
     """
-    Distributionally Robust Maximum Mean Optimizer (Wasserstein Ambiguity).
+    Wasserstein Ambiguity Maximum Mean Optimization.
 
-    Optimizes portfolio weights to maximize the worst-case expected return
-    under distributions within a Wasserstein ball around the empirical distribution.
-
-    The optimizer uses a dual reformulation with the log-sum-exp trick for
-    computational tractability, allowing control over the uncertainty size
-    and the underlying metric norm.
+    Maximum mean return under Wasserstein uncertainty has
+    been studied extensively in the robust optimization literature. The
+    Kantorovich-Rubinstein duality theorem provides an explicit dual reformulation:
+    the worst-case expected return equals the nominal expected return minus a
+    robustness penalty proportional to the maximum expected deviation.
     """
 
-    def __init__(self, radius=0.2, ground_norm=2):
+    def __init__(self, radius=0.01, ground_norm=2):
         """
-        Initializes the Wasserstein Distributionally Robust Maximum Mean optimizer.
-
-        :param radius: Radius of the Wasserstein uncertainty set. Larger values
-                       correspond to greater robustness against distributional
-                       misspecification.
-        :param ground_norm: Norm used in the ground metric for the Wasserstein ball.
-                            Can be any real number >= 1 or 'inf'.
+        Args:
+            radius (*float, optional*): The size of the uncertainty set (KL-divergence bound). Larger values indicate higher uncertainty. Defaults to `0.01`.
+            ground_norm (*int, optional*): Wasserstein ground norm. Used to find the dual norm for the dual objective. Must be a positive integer. Defaults to `2`.
         """
         self.identity = "wassdr-mm"
         self.radius = radius
@@ -219,11 +311,6 @@ class WassRobustMaxMean(Optimizer):
         self.weights = None
 
     def _find_dual(self):
-        """
-        Computes the dual norm function corresponding to the chosen ground norm.
-
-        This is used in the dual reformulation of the Wasserstein robust optimization.
-        """
         if isinstance(self.ground_norm, str) and self.ground_norm.lower() == "inf":
             self.dual_norm = lambda w: np.sum(np.abs(w))
             return
@@ -243,15 +330,7 @@ class WassRobustMaxMean(Optimizer):
             )
             return
 
-    def prepare_optimization_inputs(self, data, weight_bounds, w, custom_mean=None):
-        """
-        Prepares and validates inputs for Wasserstein robust optimization.
-
-        :param data: Historical returns or OHLCV data.
-        :param weight_bounds: Tuple of (min_weight, max_weight) constraints.
-        :param w: Initial weight vector.
-        :param custom_mean: Optional custom mean vector for returns.
-        """
+    def _prepare_optimization_inputs(self, data, weight_bounds, w, custom_mean=None):
         # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
         # Checking for mean and weights and assigning optimization data accordingly
         self.mean = np.mean(data, axis=0) if custom_mean is None else custom_mean
@@ -275,20 +354,68 @@ class WassRobustMaxMean(Optimizer):
 
     def optimize(self, data=None, weight_bounds=(0, 1), w=None, custom_mean=None):
         """
-        Performs Wasserstein robust maximum mean optimization.
+        Solves the Kantorovich-Rubinstein dual objective for type-1 Wasserstein distances:
 
-        Solves for portfolio weights that maximize the worst-case expected return
-        within a Wasserstein ball of radius `self.radius` around the empirical distribution.
+        $$
+        \\min_{\\mathbf{w}} \\ - \\mathbf{w}^\\top \\mu + \\epsilon \\| w \\|_{\\text{d}}
+        $$
 
-        :param data: Historical return data.
-        :param weight_bounds: Tuple specifying min and max weight for each asset.
-        :param w: Optional initial weight vector.
-        :param custom_mean: Optional custom mean vector for returns.
-        :return: Optimized weight vector.
-        :raises OptimizationError: If the solver fails to converge.
+        Args:
+            data (*pd.DataFrame*): Ticker price data in either multi-index or single-index formats. Examples are given below:
+                ```
+                # Single-Index Example
+                Ticker           TSLA      NVDA       GME        PFE       AAPL  ...
+                Date
+                2015-01-02  14.620667  0.483011  6.288958  18.688917  24.237551  ...
+                2015-01-05  14.006000  0.474853  6.460137  18.587513  23.554741  ...
+                2015-01-06  14.085333  0.460456  6.268492  18.742599  23.556952  ...
+                2015-01-07  14.063333  0.459257  6.195926  18.999102  23.887287  ...
+                2015-01-08  14.041333  0.476533  6.268492  19.386841  24.805082  ...
+                ...
+
+                # Multi-Index Example Structure (OHLCV)
+                Columns:
+                + Ticker (e.g. GME, PFE, AAPL, ...)
+                - Open
+                - High
+                - Low
+                - Close
+                - Volume
+                ```
+            weight_bounds (*tuple, optional*): Boundary constraints for asset weights. Values must be of the format `(lesser, greater)` with `0 <= |lesser|, |greater| <= 1`. Defaults to `(0,1)`.
+            w (*None or np.ndarray, optional*): Initial weight vector for warm starts. Mainly used for backtesting and not recommended for user input. Defaults to `None`.
+            custom_mean (*None or np.ndarray, optional*): Custom mean vector. Can be used to inject externally generated mean vectors (eg. Black-Litterman). Defaults to `None`.
+
+        **Returns:**
+
+        - `np.ndarray`: Vector of optimized portfolio weights.
+
+        Raises:
+            DataError: For any data mismatch during integrity check.
+            PortfolioError: For any invalid portfolio variable inputs during integrity check.
+            OptimizationError: If `SLSQP` solver fails to solve.
+
+        !!! example "Example:"
+            ```python
+            # Importing the dro maximum mean module
+            from opes.objectives.distributionally_robust import WassRobustMaxMean
+
+            # Let this be your ticker data
+            training_data = some_data()
+
+            # Let this be your custom mean vector
+            # Can be Black-Litterman, Bayesian, Fama-French etc.
+            mean_v = customMean()
+
+            # Initialize with ground norm and Wasserstein radius
+            wass_maxmean = WassRobustMaxMean(radius=0.04, ground_norm=3)
+
+            # Optimize portfolio with custom weight bounds and mean vector
+            weights = wass_maxmean.optimize(data=training_data, weight_bounds=(0.05, 0.75), custom_mean=mean_v)
+            ```
         """
         # Preparing optimization and finding constraint
-        self.prepare_optimization_inputs(
+        self._prepare_optimization_inputs(
             data, weight_bounds, w, custom_mean=custom_mean
         )
         constraint = find_constraint(weight_bounds)

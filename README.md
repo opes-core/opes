@@ -6,11 +6,9 @@ An Open-source Portfolio Estimation System for advanced portfolio optimization a
 
 ## Overview
 
-OPES is a comprehensive Python library for advanced portfolio optimization and backtesting. Designed for quantitative finance enthusiasts,  OPES provides a wide range of portfolio strategies, risk measures and robust evaluation tools.
+OPES is a comprehensive Python library for advanced portfolio optimization and backtesting. Designed for quantitative finance enthusiasts, OPES provides a wide range of portfolio strategies, risk measures and robust evaluation tools.
 
-Visit the [documentation](https://github.com/opes-core/opes-documentation) for quick insights.
-
-For a detailed guide on this module, visit the [guide](https://opes.pages.dev).
+Visit the [documentation](https://opes.pages.dev) for a detailed walkthrough on this module.
 
 ---
 
@@ -20,44 +18,37 @@ The information provided by OPES is for educational, research and informational 
 
 ---
 
-## Porfolio Objectives
+## Portfolio Objectives
 
-### Utility Theory
-- Quadratic Utility
-- Constant Relative Risk Aversion
-- Constant Absolute Risk Aversion
-- Hyperbolic Absolute Risk Aversion
-- Kelly Criterion and Fractions
+| Classification                           | Name                                               |
+| ---------------------------------------- | -------------------------------------------------- |
+| **Utility Theory**                       | Quadratic Utility                                  |
+|                                          | Constant Relative Risk Aversion (CRRA)             |
+|                                          | Constant Absolute Risk Aversion (CARA)             |
+|                                          | Hyperbolic Absolute Risk Aversion (HARA)           |
+|                                          | Kelly Criterion & Fractional Kelly                 |
+| **Markowitz Paradigm**                   | Maximum Mean Return                                |
+|                                          | Minimum Variance                                   |
+|                                          | Mean–Variance                                      |
+|                                          | Maximum Sharpe Ratio                               |
+| **Principled Heuristics**                | Uniform (1/N)                                      |
+|                                          | Risk Parity                                        |
+|                                          | Inverse Volatility                                 |
+|                                          | Softmax Mean                                       |
+|                                          | Maximum Diversification                            |
+|                                          | Return Entropy Portfolio Optimization              |
+| **Risk Measures**                        | Conditional Value at Risk (CVaR)                   |
+|                                          | Mean–CVaR                                          |
+|                                          | Entropic Value at Risk (EVaR)                      |
+|                                          | Mean–EVaR                                          |
+|                                          | Entropic Risk Measure                              |
+| **Online Learning**                      | Best Constant Rebalanced Portfolio (BCRP)          |
+|                                          | Exponential Gradient                               |
+| **Distributionally Robust Optimization** | KL-Ambiguity Robust Maximum Mean Return            |
+|                                          | KL-Ambiguity Robust Kelly                          |
+|                                          | KL-Ambiguity Robust Fractional Kelly               |
+|                                          | Wasserstein-Ambiguity Robust Maximum Mean Return   |
 
-### Markowitz Paradigm
-- Maximum Mean
-- Minimum Variance
-- Mean Variance
-- Maximum Sharpe
-
-### Principled Heuristics
-- Uniform (1/N)
-- Risk Parity
-- Inverse Volatility
-- Softmax Mean
-- Maximum Diversification
-- Return Entropy Portfolio Optimization
-
-### Risk Measures
-- Conditional Value at Risk
-- Mean-CVaR
-- Entropic Value at Risk
-- Mean-EVaR
-- Entropic Risk Measure
-
-### Online Learning
-- BCRP with weight regularization (FTL/FTRL support)
-- Exponential Gradient
-
-### Distributionally Robust Optimization
-- KL-Ambiguity Distributionally Robust Maximum Mean
-- KL-Ambiguity Distributionally Robust Kelly and Fractions
-- Wasserstein-Ambiguity Distributionally Robust Maximum Mean
 
 ## Slippage Models
 - Constant
@@ -74,26 +65,21 @@ The information provided by OPES is for educational, research and informational 
 - Weight Variance
 - Mean Pairwise Absolute Deviation
 
-## Backtest Metrics
- - Sharpe Ratio
- - Sortino Ratio
- - Volatility
- - Average Return
- - Total Return
- - Maximum Drawdown
- - Value at Risk 95
- - Conditional Value at Risk 95
- - Skew
- - Kurtosis
- - Omega Ratio
+## Metrics
 
-## Portfolio Metrics
-- Tickers
-- Weights
-- Portfolio Entropy
-- Herfindahl Index
-- Gini Coefficient
-- Absolute Maximum Weight
+| Portfolio Metrics        | Backtest Metrics             |
+| ------------------------ | ---------------------------- |
+| Tickers                  | Sharpe                       |
+| Weights                  | Sortino                      |
+| Portfolio Entropy        | Volatility                   |
+| Herfindahl Index         | Average Return               |
+| Gini Coefficient         | Total Return                 |
+| Absolute Maximum Weight  | Maximum Drawdown             |
+|                          | Value-at-Risk 95             |
+|                          | Conditional-Value-at-Risk 95 |
+|                          | Skew                         |
+|                          | Kurtosis                     |
+|                          | Omega Ratio                  |
 
 ---
 
@@ -101,10 +87,11 @@ The information provided by OPES is for educational, research and informational 
 
 These features are still in the works and may or may not appear in later updates:
 
-* Mean–Variance–Skew–Kurtosis Optimization (Markowitz)
+* Worst-Case Loss Optimization (Risk Measures)
 * Hierarchical Risk Parity (Principled Heuristics)
+* Universal Portfolios (Online Learning)
 * Online Newton Step (Online Learning)
-* Ada Barrons (Online Learning)
+* ADA-BARRONS (Online Learning)
 * Wasserstein Ambiguity Duals (Distributionally Robust)
 
   * Global Minimum Variance (GMV)

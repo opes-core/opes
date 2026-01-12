@@ -1,7 +1,7 @@
 """
-OPES contains a portfolio backtesting engine inclusive of a simple plotting function 
-using a supplied optimizer. The method supports both static and rolling portfolio 
-construction, applies transaction costs and enforces strict no-lookahead 
+OPES contains a portfolio backtesting engine inclusive of a simple plotting function
+using a supplied optimizer. The method supports both static and rolling portfolio
+construction, applies transaction costs and enforces strict no-lookahead
 constraints during rebalancing.
 
 The backtest operates exclusively on the test dataset while ensuring that
@@ -169,8 +169,8 @@ class Backtester:
 
         Args:
             optimizer: Portfolio optimizer object with an `optimize` method.
-            rebalance_freq (*int or None*): Frequency of rebalancing in time steps. If None, a static weight backtest is performed.
-            seed (*int or None*): Random seed for reproducible cost simulations.
+            rebalance_freq (*int or None, optional*): Frequency of rebalancing in time steps. If `None`, a static weight backtest is performed. Defaults to `None`.
+            seed (*int or None, optional*): Random seed for reproducible cost simulations. Defaults to `None`.
             weight_bounds (*tuple, optional*): Bounds for portfolio weights passed to the optimizer if supported.
 
         **Returns:**

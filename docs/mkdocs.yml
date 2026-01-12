@@ -42,14 +42,13 @@ extra_javascript:
 nav:
   - Home: index.md
   - Installation: installation.md
-  - Common Methods: common_methods.md
   - Objectives:
-      - Utility Theory: methods/utility_theory.md
-      - Markowitz: methods/markowitz.md
-      - Principled Heuristics: methods/heuristics.md
-      - Risk Measures: methods/risk_measures.md
-      - Online Learning: methods/online_learning.md
-      - Distributionally Robust: methods/dro.md
+      - Utility Theory: objectives/utility_theory.md
+      - Markowitz: objectives/markowitz.md
+      - Principled Heuristics: objectives/heuristics.md
+      - Risk Measures: objectives/risk_measures.md
+      - Online Learning: objectives/online_learning.md
+      - Distributionally Robust: objectives/dro.md
   - Regularization: regularization.md
   - Backtesting: backtesting.md
   - Examples:

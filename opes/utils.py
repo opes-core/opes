@@ -7,7 +7,6 @@ from opes.errors import DataError, PortfolioError
 
 # Sequence element checker
 def all_elements_are_type(sequence, target):
-    """Check if all elements in a sequence are of the specified type."""
     return all(isinstance(i, target) for i in sequence)
 
 

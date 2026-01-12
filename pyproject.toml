@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opes"
-version = "0.5.3"
+version = "0.5.4"
 description = "A research-focused portfolio optimization and backtesting engine."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -27,5 +27,4 @@ classifiers = [
 
 [project.urls]
 repository = "https://github.com/opes-core/opes"
-documentation = "https://github.com/opes-core/opes-documentation"
-book = "https://opes.pages.dev"
+documentation = "https://opes.pages.dev"

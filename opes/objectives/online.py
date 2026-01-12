@@ -1,9 +1,26 @@
+"""
+Online portfolio selection represents a fundamentally different paradigm from
+traditional optimization: rather than assuming stationary distributions and
+optimizing once, online algorithms sequentially update portfolio weights as new
+data arrives, making no statistical assumptions about return distributions. This
+framework emerged from machine learning and online learning theory, where the goal
+is to compete with the best fixed strategy in hindsight while observing data
+only once, in sequence.
+
+!!! warning "Warning:"
+    Certain online learning algorithms, currently `ExponentialGradient`,
+    only uses the latest return data to update the weights. So, they might work
+    suboptimally in backtests having `rebalance_freq` more than `1`.
+
+---
+"""
+
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 
 from opes.objectives.base_optimizer import Optimizer
-from ..regularizer import find_regularizer
+from ..regularizer import _find_regularizer
 from ..utils import extract_trim, test_integrity, find_constraint
 from ..errors import OptimizationError, PortfolioError
 
@@ -13,34 +30,34 @@ EPSILON = 1e-8
 
 class BCRP(Optimizer):
     """
-    Best Constant Rebalanced Portfolio (BCRP) optimizer.
+    Best Constant Rebalanced Portfolio (BCRP).
 
-    Finds the static weight vector that would have maximized the total wealth
-    of the portfolio in hindsight over the provided historical data.
+    Introduced by Thomas Cover in his universal portfolio theory, the BCRP
+    represents the optimal fixed-weight portfolio that rebalances to constant
+    proportions after each period. BCRP is the gold standard benchmark in
+    online portfolio selection: It achieves the maximum wealth that any
+    constant-proportion strategy could have achieved over the observed sequence.
     """
 
     def __init__(self, reg=None, strength=1):
         """
-        Initializes the BCRP optimizer.
+        Args:
+            reg (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
+            strength (*float, optional*): Strength of the regularization. Defaults to `1`.
 
-        :param reg: A regularization function or name.
-        :param strength: Scalar multiplier for the regularization penalty.
+        !!! tip "Tip:"
+            Since both Follow-the-Leader (FTL) and Follow-the-Regularized-Leader (FTRL) compute the best constant rebalanced portfolio
+            (BCRP) in hindsight to determine the allocation for the subsequent time step, both strategies can be implemented using the
+            `BCRP` class.
         """
         self.identity = "bcrp"
-        self.reg = find_regularizer(reg)
+        self.reg = _find_regularizer(reg)
         self.strength = strength
 
         self.tickers = None
         self.weights = None
 
-    def prepare_optimization_inputs(self, data, w):
-        """
-        Processes data to extract tickers and return history, and initializes weights.
-
-        :param data: Input financial data.
-        :param w: Initial weights.
-        :return: Cleaned return data array.
-        """
+    def _prepare_optimization_inputs(self, data, w):
         # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
         self.tickers, data = extract_trim(data)
         self.weights = np.array(
@@ -54,16 +71,65 @@ class BCRP(Optimizer):
 
     def optimize(self, data=None, w=None):
         """
-        Executes the BCRP optimization by maximizing the product of portfolio returns.
+        Solves the BCRP objective:
 
-        :param data: Historical return data.
-        :param w: Initial weight vector.
-        :return: Optimized weight vector (the constant rebalancing vector).
-        :raises OptimizationError: If the optimization solver fails.
+        $$
+        \\min_{\\mathbf{w}} \\ - \\prod^T_t \\left(\\mathbf{w}^\\top \\mathbf{x}_t\\right) + \\lambda R(\\mathbf{w})
+        $$
+
+        Args:
+            data (*pd.DataFrame*): Ticker price data in either multi-index or single-index formats. Examples are given below:
+                ```
+                # Single-Index Example
+                Ticker           TSLA      NVDA       GME        PFE       AAPL  ...
+                Date
+                2015-01-02  14.620667  0.483011  6.288958  18.688917  24.237551  ...
+                2015-01-05  14.006000  0.474853  6.460137  18.587513  23.554741  ...
+                2015-01-06  14.085333  0.460456  6.268492  18.742599  23.556952  ...
+                2015-01-07  14.063333  0.459257  6.195926  18.999102  23.887287  ...
+                2015-01-08  14.041333  0.476533  6.268492  19.386841  24.805082  ...
+                ...
+
+                # Multi-Index Example Structure (OHLCV)
+                Columns:
+                + Ticker (e.g. GME, PFE, AAPL, ...)
+                - Open
+                - High
+                - Low
+                - Close
+                - Volume
+                ```
+            w (*None or np.ndarray, optional*): Initial weight vector for warm starts. Mainly used for backtesting and not recommended for user input. Defaults to `None`.
+
+        **Returns:**
+
+        - `np.ndarray`: Vector of optimized portfolio weights.
+
+        Raises:
+            DataError: For any data mismatch during integrity check.
+            PortfolioError: For any invalid portfolio variable inputs during integrity check.
+            OptimizationError: If `SLSQP` solver fails to solve.
+
+        !!! example "Example:"
+            ```python
+            # Importing the BCRP module
+            from opes.objectives.online import BCRP
+
+            # Let this be your ticker data
+            training_data = some_data()
+
+            # Initialize BCRP for FTL and FTRL respectively
+            ftl = BCRP()
+            ftrl = BCRP(reg='entropy', strength=0.05)
+
+            # Optimize both FTL and FTRL portfolios
+            weights_ftl = ftl.optimize(data=training_data)
+            weights_ftrl = ftrl.optimize(data=training_data)
+            ```
         """
         # Preparing optimization and finding constraint
         # Bounds are defaulted to (0,1), constrained to the simplex
-        trimmed_return_data = self.prepare_optimization_inputs(data, w)
+        trimmed_return_data = self._prepare_optimization_inputs(data, w)
         constraint = find_constraint(bounds=(0, 1))
         w = self.weights
 
@@ -85,10 +151,34 @@ class BCRP(Optimizer):
         """
         Updates the regularization function and its penalty strength.
 
-        :param reg: The regularization function or name (e.g., 'l1', 'l2') to apply.
-        :param strength: Scalar multiplier for the regularization penalty.
+        This method updates both the regularization function and its associated
+        penalty strength. It is primarily intended for strategies in which the
+        regularization must change over time, such as in Follow-the-Regularized-
+        Leader (FTRL) or other adaptive optimization procedures.
+
+        Args:
+            reg (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
+            strength (*float, optional*): Strength of the regularization. Defaults to `1`.
+
+        !!! example "Example:"
+            ```python
+            # Import the BCRP class
+            from opes.objectives.online import BCRP
+
+            # Set with 'entropy' regularization
+            ftrl = BCRP(reg='entropy', strength=0.01)
+
+            # --- Do Something with `ftrl` ---
+            ftrl.optimize(data=some_data())
+
+            # Change regularizer using `set_regularizer`
+            ftrl.set_regularizer(reg='l1', strength=0.02)
+
+            # --- Do something else with new `ftrl` ---
+            ftrl.optimize(data=some_data())
+            ```
         """
-        self.reg = find_regularizer(reg)
+        self.reg = _find_regularizer(reg)
         self.strength = strength
 
 
@@ -96,16 +186,16 @@ class ExponentialGradient(Optimizer):
     """
     Exponential Gradient (EG) optimizer for online portfolio selection.
 
-    An iterative update strategy that adjusts weights based on the relative
-    performance of assets in the most recent period, used to track the best
-    performing assets over time.
+    The Exponential Gradient algorithm is a foundational online learning algorithm
+    that updates portfolio weights using multiplicative updates proportional to exponential returns.
+    Introduced by Helmbold et. al, it belongs to the family of online convex optimization algorithms
+    and maintains weights that rise exponentially with cumulative performance.
     """
 
     def __init__(self, learning_rate=0.3):
         """
-        Initializes the Exponential Gradient optimizer.
-
-        :param learning_rate: Scalar step size (eta) for the weight update rule.
+        Args:
+            learning_rate (*float, optional*): Learning rate for the EG algorithm. Usually bounded within (0,1]. Defaults to `0.3`.
         """
         self.identity = "expgrad"
         self.learning_rate = learning_rate
@@ -113,14 +203,7 @@ class ExponentialGradient(Optimizer):
         self.tickers = None
         self.weights = None
 
-    def prepare_inputs(self, data, w):
-        """
-        Extracts recent returns and initializes the weight vector for the update step.
-
-        :param data: Input financial data.
-        :param w: Current/Previous weights to be updated.
-        :return: Cleaned return data array.
-        """
+    def _prepare_inputs(self, data, w):
         # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
         # Defaulting previous weights to 1/N if none are given
         self.tickers, data = extract_trim(data)
@@ -135,18 +218,67 @@ class ExponentialGradient(Optimizer):
 
     def optimize(self, data=None, w=None):
         """
-        Performs the Exponential Gradient update step.
+        Performs the Exponential Gradient weight update rule.
 
-        Uses the log-sum-exp technique to update weights based on the gradient
-        of the log-return relative to the most recent data point.
+        $$
+        \\mathbf{w}_{i,t+1} = \\mathbf{w}_{i,t} \\cdot \\exp(\\eta \\cdot \\nabla f_{t,i})
+        $$
 
-        :param data: Input data containing at least the most recent return.
-        :param w: The current weight vector to be updated.
-        :return: The newly updated weight vector.
+        For this implementation, we have taken the reward function $f_{t} = \\log \\left(1 + \\mathbf{w}^\\top \\mathbf{r}_t\\right)$
+
+        !!! note "Note"
+            Asset weight bounds are defaulted to (0,1).
+
+        Args:
+            data (*pd.DataFrame*): Ticker price data in either multi-index or single-index formats. Examples are given below:
+                ```
+                # Single-Index Example
+                Ticker           TSLA      NVDA       GME        PFE       AAPL  ...
+                Date
+                2015-01-02  14.620667  0.483011  6.288958  18.688917  24.237551  ...
+                2015-01-05  14.006000  0.474853  6.460137  18.587513  23.554741  ...
+                2015-01-06  14.085333  0.460456  6.268492  18.742599  23.556952  ...
+                2015-01-07  14.063333  0.459257  6.195926  18.999102  23.887287  ...
+                2015-01-08  14.041333  0.476533  6.268492  19.386841  24.805082  ...
+                ...
+
+                # Multi-Index Example Structure (OHLCV)
+                Columns:
+                + Ticker (e.g. GME, PFE, AAPL, ...)
+                - Open
+                - High
+                - Low
+                - Close
+                - Volume
+                ```
+            w (*None or np.ndarray, optional*): Previous weight vector for updation. If `None`, previous weights are assumed to be uniform weights. Defaults to `None`.
+
+        **Returns:**
+
+        - `np.ndarray`: Vector of optimized portfolio weights.
+
+        Raises:
+            DataError: For any data mismatch during integrity check.
+            PortfolioError: For any invalid portfolio variable inputs during integrity check.
+
+        !!! example "Example:"
+            ```python
+            # Importing the exponential gradient module
+            from opes.objectives.online import ExponentialGradient as EG
+
+            # Let this be your ticker data
+            training_data = some_data()
+
+            # Initialize exponential gradient with high learning rate
+            e_g = EG(learning_rate=0.77)
+
+            # Optimize for weights using a previous weight vector
+            updated_weights = e_g.optimize(data=training_data, w=prev_weights())
+            ```
         """
         # Preparing optimization and finding constraint
         # EG uses weight update method, so it takes the most recent (gross) return and uses it to update weights
-        recent_return = self.prepare_inputs(data, w)[-1] + 1.0
+        recent_return = self._prepare_inputs(data, w)[-1] + 1.0
         portfolio_return = recent_return @ self.weights
 
         # Capping to small epsilon value for numerical stability

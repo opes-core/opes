@@ -15,14 +15,13 @@ import yfinance as yf
 # Tickers and statistic fields
 TICKERS = ["AAPL", "MSFT", "GOOG", "AMZN"]
 STAT_FIELDS = [
-    "Tickers",
-    "Weights",
-    "Portfolio Entropy",
-    "Herfindahl Index",
-    "Gini Coefficient",
-    "Absolute Max Weight",
+    "tickers",
+    "weights", 
+    "portfolio_entropy", 
+    "herfindahl_index", 
+    "gini_coefficient", 
+    "absolute_max_weight"
 ]
-
 
 # Function to fetch yfinance data
 @pytest.fixture(scope="module")

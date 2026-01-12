@@ -1,10 +1,11 @@
 # `backtester`
 
-OPES contains a portfolio backtesting engine using a supplied optimizer. 
-The method supports both static and rolling portfolio construction, 
-applies transaction costs and enforces strict no-lookahead constraints during rebalancing.
+OPES contains a portfolio backtesting engine inclusive of a simple plotting function
+using a supplied optimizer. The method supports both static and rolling portfolio
+construction, applies transaction costs and enforces strict no-lookahead
+constraints during rebalancing.
 
-The backtest operates exclusively on the test dataset while ensuring that 
+The backtest operates exclusively on the test dataset while ensuring that
 all portfolio decisions are made using only information available at the time of execution.
 
 ---
@@ -60,14 +61,14 @@ It also stores transaction cost parameters for portfolio simulations.
     ```
     - NaN values in both `train_data` and `test_data` are automatically dropped to prevent indexing errors during backtests. So Assets with shorter trading histories truncate the dataset.
     - After cleaning/truncation, close prices are extracted per asset. Returns are computed as:
-    
+
     $$R_t = \frac{P^{(t)}}{P^{(t-1)}} - 1$$
 
 ---
 
-## Methods
+### Methods
 
-### `backtest`
+#### `backtest`
 
 ```python
 def backtest(
@@ -88,17 +89,17 @@ For a rolling backtest, any common date values are dropped, the first occurrence
 is considered to be original and kept.
 
 !!! warning "Warning:"
-    Some online learning methods such as `ExponentialGradient` update weights based 
-    on the most recent observations. Setting `rebalance_freq` to any value other 
-    than `1` (or possibly `None`) may result in suboptimal performance, as 
-    intermediate data points will be ignored and not used for weight updates. 
+    Some online learning methods such as `ExponentialGradient` update weights based
+    on the most recent observations. Setting `rebalance_freq` to any value other
+    than `1` (or possibly `None`) may result in suboptimal performance, as
+    intermediate data points will be ignored and not used for weight updates.
     Proceed with caution when using other rebalancing frequencies with online learning algorithms.
 
 **Args**
 
 - `optimizer`: Portfolio optimizer object with an `optimize` method.
-- `rebalance_freq` (*int or None*): Frequency of rebalancing in time steps. If None, a static weight backtest is performed.
-- `seed` (*int or None*): Random seed for reproducible cost simulations.
+- `rebalance_freq` (*int or None, optional*): Frequency of rebalancing in time steps. If `None`, a static weight backtest is performed. Defaults to `None`.
+- `seed` (*int or None, optional*): Random seed for reproducible cost simulations. Defaults to `None`.
 - `weight_bounds` (*tuple, optional*): Bounds for portfolio weights passed to the optimizer if supported.
 
 
@@ -153,7 +154,7 @@ is considered to be original and kept.
 
 ---
 
-### `get_metrics`
+#### `get_metrics`
 
 ```python
 def get_metrics(returns)
@@ -218,13 +219,13 @@ commonly used in finance, including volatility, drawdowns, and tail risk metrics
 
 ---
 
-### `plot_wealth`
+#### `plot_wealth`
 
 ```python
 def plot_wealth(returns_dict, initial_wealth=1.0, savefig=False)
 ```
 
-OPES ships with a basic plotting utility for visualizing portfolio wealth over time. 
+OPES ships with a basic plotting utility for visualizing portfolio wealth over time.
 
 This method exists for quick inspection and debugging, not for deep performance analysis.
 It visualizes cumulative wealth for one or multiple strategies
@@ -232,8 +233,8 @@ using their periodic returns. It also provides a breakeven reference line
 and optional saving of the plot to a file.
 
 !!! tip "Recommendation:"
-    For serious research, reporting, or strategy comparison, we strongly recommend writing your own custom plotting pipeline. 
-    Real evaluation usually needs rolling Sharpe, drawdowns, volatility regimes, benchmark overlays and other diagnostics that 
+    For serious research, reporting, or strategy comparison, we strongly recommend writing your own custom plotting pipeline.
+    Real evaluation usually needs rolling Sharpe, drawdowns, volatility regimes, benchmark overlays and other diagnostics that
     go far beyond a single equity curve.
 
 **Args**
@@ -255,25 +256,25 @@ and optional saving of the plot to a file.
     # Importing portfolio methods and backtester
     from opes.objectives.markowitz import MaxMean, MeanVariance
     from opes.backtester import Backtester
-    
+
     # Place holder for your price data
     from some_random_module import trainData, testData
-    
+
     # Declare train and test data
     training = trainData()
     testing = testData()
-    
+
     # Declare two optimizers
     maxmeanl2 = MaxMean(reg="l2", strength=0.001)
     mvo1_5 = MeanVariance(risk_aversion=1.5)
-    
+
     # Initializing Backtest with constant costs
     tester = Backtester(train_data=training, test_data=testing)
-    
+
     # Obtaining returns array from backtest for both optimizers (Monthly Rebalancing)
     scenario_1 = tester.backtest(optimizer=maxmeanl2, rebalance_freq=21)['returns']
     scenario_2 = tester.backtest(optimizer=mvo1_5, rebalance_freq=21)['returns']
-    
+
     # Plotting wealth
     tester.plot_wealth(
         {
