@@ -1,3 +1,14 @@
+"""
+Module for utility/helper functions.
+
+Functions included:
+    - all_elements_are_type(sequence, target): Checks whether all elements are the same type `target` within `sequence`.
+    - extract_trim(data): Extracts tickers after trimming price data. Drops Nans.
+    - find_constraint(bounds, constraint_type): Finds constraints necessary for optimization. Uses two types for various objectives.
+    - slippage(weights, returns, cost, numpy_seed): Computes turnover and slippage given weight and returns. Selects the slippage model according to input
+    - test_integrity(...): Conducts a rigorous integrity test for data, portfolio variables and more to capture input related errors at the earliest.
+"""
+
 from numbers import Integral as Integer, Real
 import numpy as np
 import pandas as pd

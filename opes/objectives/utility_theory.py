@@ -35,7 +35,7 @@ class Kelly(Optimizer):
     def __init__(self, fraction=1.0, reg=None, strength=1):
         """
         Args:
-            fraction (*float, optional*): The Kelly fraction to apply. Must be bounded within (0,1]. Defaults to `1.0`.
+            fraction (*float, optional*): The Kelly fractionional exposure. Must be bounded within (0,1]. Defaults to `1.0`.
             reg (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
             strength (*float, optional*): Strength of the regularization. Defaults to `1`.
         """
@@ -350,7 +350,7 @@ class CARA(Optimizer):
     def __init__(self, risk_aversion=1, reg=None, strength=1):
         """
         Args:
-            risk_aversion (*float, optional*): Risk aversion for quadratic utility. Usually greater than `0`. Defaults to `1.0`.
+            risk_aversion (*float, optional*): Risk aversion for CARA utility. Must be greater than `0`. Defaults to `1.0`.
             reg (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
             strength (*float, optional*): Strength of the regularization. Defaults to `1`.
         """
@@ -510,7 +510,7 @@ class CRRA(Optimizer):
     def __init__(self, risk_aversion=2.0, reg=None, strength=1):
         """
         Args:
-            risk_aversion (*float, optional*): Risk aversion for quadratic utility. Must be greater than `1`. Defaults to `2.0`.
+            risk_aversion (*float, optional*): Risk aversion for CRRA utility. Must be greater than `1`. Defaults to `2.0`.
             reg (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
             strength (*float, optional*): Strength of the regularization. Defaults to `1`.
         """
@@ -672,7 +672,7 @@ class HARA(Optimizer):
         """
         Initializes the HARA optimizer.
         Args:
-            risk_aversion (*float, optional*): Risk aversion for quadratic utility. Must be greater than `1.0`. Defaults to `2.0`.
+            risk_aversion (*float, optional*): Risk aversion for HARA utility. Must be greater than `1.0`. Defaults to `2.0`.
             scale (*float, optional*): Scaling factor for the wealth term. Must be greater than `0`. Defaults to `1.0`.
             shift (*float, optional*): Shift parameter for the utility function. Defaults to `3.0`.
             reg (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.

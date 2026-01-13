@@ -38,7 +38,7 @@ class Uniform(Optimizer):
 
     def __init__(self):
         """
-        the `Uniform` optimizer does not require any parameters to initialize.
+        The `Uniform` optimizer does not require any parameters to initialize.
         """
         self.identity = "uniform"
 
@@ -136,13 +136,13 @@ class InverseVolatility(Optimizer):
     is grounded in the intuition that higher-risk assets should receive
     smaller allocations, which is equivalent to risk parity when all assets
     are uncorrelated. While deliberately naive about correlations, inverse
-    volatility portfolios are trivial to compute, require minimal data, and
+    volatility portfolios are trivial to compute, require minimal data and
     often perform surprisingly well out-of-sample.
     """
 
     def __init__(self):
         """
-        the `InverseVolatility` optimizer does not require any parameters to initialize.
+        The `InverseVolatility` optimizer does not require any parameters to initialize.
         """
         self.identity = "invvol"
         self.volarray = None
@@ -711,7 +711,6 @@ class REPO(Optimizer):
 
     def __init__(self, risk_aversion=1, reg=None, strength=1):
         """
-        Initializes the REPO optimizer.
         Args:
             risk_aversion (*float, optional*): Risk-aversion coefficient. Higher values emphasize risk (entropy) minimization, while lower values favor return seeking. Usually greater than `0`. Defaults to `0.5`.
             reg (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.

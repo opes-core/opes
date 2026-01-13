@@ -72,8 +72,7 @@ class KLRobustMaxMean(Optimizer):
         \\min_{\\mathbf{w}, \\alpha \\ge 0} \\ \\alpha \\log \\mathbb{E}_{\\mathbb{P}} \\left[e^{\\mathbf{w}^\\top \\mathbf{r} / \\alpha}\\right] + \\alpha \\epsilon
         $$
 
-        Uses the log-sum-exp technique to solve for the worst-case expected return
-        making the objective numerically stable.
+        Uses the log-sum-exp technique to solve for numerical stability.
 
         Args:
             data (*pd.DataFrame*): Ticker price data in either multi-index or single-index formats. Examples are given below:
@@ -291,9 +290,7 @@ class WassRobustMaxMean(Optimizer):
 
     Maximum mean return under Wasserstein uncertainty has
     been studied extensively in the robust optimization literature. The
-    Kantorovich-Rubinstein duality theorem provides an explicit dual reformulation:
-    the worst-case expected return equals the nominal expected return minus a
-    robustness penalty proportional to the maximum expected deviation.
+    Kantorovich-Rubinstein duality theorem provides an explicit dual reformulation.
     """
 
     def __init__(self, radius=0.01, ground_norm=2):

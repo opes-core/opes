@@ -55,14 +55,14 @@ def clean_weights(threshold=1e-08)
 Cleans the portfolio weights by setting very small positions to zero.
 
 Any weight whose absolute value is below the specified `threshold` is replaced with zero.
-This helps remove negligible allocations while keeping the array structure intact. This method
-is primarily useful for statistical portfolios with moderate amount of risk aversion, eg. Mean-Variance.
-This method requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
+This helps remove negligible allocations while keeping the array structure intact. This method 
+requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
 defined other than `None`.
 
 !!! warning "Warning:"
     This method modifies the existing portfolio weights in place. After cleaning, re-optimization
     is required to recover the original weights.
+
 **Args**
 
 - `threshold` (*float, optional*): Float specifying the minimum absolute weight to retain. Defaults to `1e-8`.
@@ -247,14 +247,14 @@ def clean_weights(threshold=1e-08)
 Cleans the portfolio weights by setting very small positions to zero.
 
 Any weight whose absolute value is below the specified `threshold` is replaced with zero.
-This helps remove negligible allocations while keeping the array structure intact. This method
-is primarily useful for statistical portfolios with moderate amount of risk aversion, eg. Mean-Variance.
-This method requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
+This helps remove negligible allocations while keeping the array structure intact. This method 
+requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
 defined other than `None`.
 
 !!! warning "Warning:"
     This method modifies the existing portfolio weights in place. After cleaning, re-optimization
     is required to recover the original weights.
+
 **Args**
 
 - `threshold` (*float, optional*): Float specifying the minimum absolute weight to retain. Defaults to `1e-8`.

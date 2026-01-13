@@ -434,7 +434,7 @@ class EVaR(Optimizer):
         $$
 
         !!! note "Note"
-            In OPES, EVaR's risk-aversion parameter, $s$, is not fixed a priori, but is optimized jointly with the portfolio's loss distribution.
+            In OPES, EVaR's risk-variable, $s$, is not fixed a priori, but is optimized jointly with the portfolio's loss distribution.
             This removes arbitrary tuning and yields a coherent, scale-consistent portfolio that is less susceptible to extreme losses and
             drawdowns for a given confidence level.
 

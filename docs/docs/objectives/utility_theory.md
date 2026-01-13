@@ -30,7 +30,7 @@ initial wealth.
 
 **Args**
 
-- `risk_aversion` (*float, optional*): Risk aversion for quadratic utility. Usually greater than `0`. Defaults to `1.0`.
+- `risk_aversion` (*float, optional*): Risk aversion for CARA utility. Must be greater than `0`. Defaults to `1.0`.
 - `reg` (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
 - `strength` (*float, optional*): Strength of the regularization. Defaults to `1`.
 
@@ -46,14 +46,14 @@ def clean_weights(threshold=1e-08)
 Cleans the portfolio weights by setting very small positions to zero.
 
 Any weight whose absolute value is below the specified `threshold` is replaced with zero.
-This helps remove negligible allocations while keeping the array structure intact. This method
-is primarily useful for statistical portfolios with moderate amount of risk aversion, eg. Mean-Variance.
-This method requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
+This helps remove negligible allocations while keeping the array structure intact. This method 
+requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
 defined other than `None`.
 
 !!! warning "Warning:"
     This method modifies the existing portfolio weights in place. After cleaning, re-optimization
     is required to recover the original weights.
+
 **Args**
 
 - `threshold` (*float, optional*): Float specifying the minimum absolute weight to retain. Defaults to `1e-8`.
@@ -223,7 +223,7 @@ the inverse of the elasticity of intertemporal substitution.
 
 **Args**
 
-- `risk_aversion` (*float, optional*): Risk aversion for quadratic utility. Must be greater than `1`. Defaults to `2.0`.
+- `risk_aversion` (*float, optional*): Risk aversion for CRRA utility. Must be greater than `1`. Defaults to `2.0`.
 - `reg` (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
 - `strength` (*float, optional*): Strength of the regularization. Defaults to `1`.
 
@@ -239,14 +239,14 @@ def clean_weights(threshold=1e-08)
 Cleans the portfolio weights by setting very small positions to zero.
 
 Any weight whose absolute value is below the specified `threshold` is replaced with zero.
-This helps remove negligible allocations while keeping the array structure intact. This method
-is primarily useful for statistical portfolios with moderate amount of risk aversion, eg. Mean-Variance.
-This method requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
+This helps remove negligible allocations while keeping the array structure intact. This method 
+requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
 defined other than `None`.
 
 !!! warning "Warning:"
     This method modifies the existing portfolio weights in place. After cleaning, re-optimization
     is required to recover the original weights.
+
 **Args**
 
 - `threshold` (*float, optional*): Float specifying the minimum absolute weight to retain. Defaults to `1e-8`.
@@ -424,7 +424,7 @@ can be calibrated to match observed portfolio behavior across different wealth l
 Initializes the HARA optimizer.
 **Args**
 
-- `risk_aversion` (*float, optional*): Risk aversion for quadratic utility. Must be greater than `1.0`. Defaults to `2.0`.
+- `risk_aversion` (*float, optional*): Risk aversion for HARA utility. Must be greater than `1.0`. Defaults to `2.0`.
 - `scale` (*float, optional*): Scaling factor for the wealth term. Must be greater than `0`. Defaults to `1.0`.
 - `shift` (*float, optional*): Shift parameter for the utility function. Defaults to `3.0`.
 - `reg` (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
@@ -446,14 +446,14 @@ def clean_weights(threshold=1e-08)
 Cleans the portfolio weights by setting very small positions to zero.
 
 Any weight whose absolute value is below the specified `threshold` is replaced with zero.
-This helps remove negligible allocations while keeping the array structure intact. This method
-is primarily useful for statistical portfolios with moderate amount of risk aversion, eg. Mean-Variance.
-This method requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
+This helps remove negligible allocations while keeping the array structure intact. This method 
+requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
 defined other than `None`.
 
 !!! warning "Warning:"
     This method modifies the existing portfolio weights in place. After cleaning, re-optimization
     is required to recover the original weights.
+
 **Args**
 
 - `threshold` (*float, optional*): Float specifying the minimum absolute weight to retain. Defaults to `1e-8`.
@@ -624,7 +624,7 @@ while sacrificing growth only linearly, improving robustness to estimation error
 
 **Args**
 
-- `fraction` (*float, optional*): The Kelly fraction to apply. Must be bounded within (0,1]. Defaults to `1.0`.
+- `fraction` (*float, optional*): The Kelly fractionional exposure. Must be bounded within (0,1]. Defaults to `1.0`.
 - `reg` (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
 - `strength` (*float, optional*): Strength of the regularization. Defaults to `1`.
 
@@ -640,14 +640,14 @@ def clean_weights(threshold=1e-08)
 Cleans the portfolio weights by setting very small positions to zero.
 
 Any weight whose absolute value is below the specified `threshold` is replaced with zero.
-This helps remove negligible allocations while keeping the array structure intact. This method
-is primarily useful for statistical portfolios with moderate amount of risk aversion, eg. Mean-Variance.
-This method requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
+This helps remove negligible allocations while keeping the array structure intact. This method 
+requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
 defined other than `None`.
 
 !!! warning "Warning:"
     This method modifies the existing portfolio weights in place. After cleaning, re-optimization
     is required to recover the original weights.
+
 **Args**
 
 - `threshold` (*float, optional*): Float specifying the minimum absolute weight to retain. Defaults to `1e-8`.
@@ -832,14 +832,14 @@ def clean_weights(threshold=1e-08)
 Cleans the portfolio weights by setting very small positions to zero.
 
 Any weight whose absolute value is below the specified `threshold` is replaced with zero.
-This helps remove negligible allocations while keeping the array structure intact. This method
-is primarily useful for statistical portfolios with moderate amount of risk aversion, eg. Mean-Variance.
-This method requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
+This helps remove negligible allocations while keeping the array structure intact. This method 
+requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
 defined other than `None`.
 
 !!! warning "Warning:"
     This method modifies the existing portfolio weights in place. After cleaning, re-optimization
     is required to recover the original weights.
+
 **Args**
 
 - `threshold` (*float, optional*): Float specifying the minimum absolute weight to retain. Defaults to `1e-8`.
