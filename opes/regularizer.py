@@ -21,7 +21,7 @@ where $R(\\mathbf{w})$ encodes structural preferences over the weights $\\mathbf
 | `l2`       | $\\sum_i \\mathbf{w}_i^2$                                                             | Produces smooth, stable portfolios and reduces sensitivity to noise.                                                                    |
 | `l-inf`    | $\\max_i \\lvert \\mathbf{w}_i\\rvert$                                                | Penalizes the largest absolute position, enforcing a soft cap on single-asset dominance.                                                |
 | `entropy`  | $-\\sum_i \\mathbf{w}_i \\log \\mathbf{w}_i$                                          | Encourages diversification by penalizing concentration.                                                                                 |
-| `variance` | $\\ \\text{Var}(\\mathbf{\\mathbf{w}})$                                               | Pushes allocations toward uniformity without strictly enforcing equal weights.                                                          |
+| `variance` | $\\ \\text{Var}(mathbf{w})$                                                           | Pushes allocations toward uniformity without strictly enforcing equal weights.                                                          |
 | `mpad`     | $\\frac{1}{n^2} \\sum_{i}^n \\sum_{j}^n \\lvert \\mathbf{w}_i - \\mathbf{w}_j\\rvert$ | Measures and penalizes inequality across weights.                                                                                       |
 | `kld`       | $\\ \\text{D}_{\\text{KL}}(\\mathbf{w} \\| \mathbf{u})$                              | Measures Kullback-Leibler divergence from uniform weights.                                                                              |
 | `jsd`      | $\\ \\text{D}_{\\text{JSD}}(\\mathbf{w} \\| \mathbf{u})$                              | Measures Jensen-Shannon divergence from uniform weights.                                                                                |
@@ -30,6 +30,10 @@ where $R(\\mathbf{w})$ encodes structural preferences over the weights $\\mathbf
     For long-short portfolios, mathematically grounded regularizers such as `entropy`, `kld`, and `jsd` first normalize the weights 
     and constrain them to the simplex before applying the regularization, ensuring mathematical coherence is not violated.
 
+!!! note "Temporary Note"
+    Kullback-Leibler regularization and entropy are the exact same, since KL-divergence's prior distribution is uniform weights. However
+    it is included so that it *may* be later updated with custom prior distribution (weights).
+    
 ---
 
 ### Portfolios without Regularization Support

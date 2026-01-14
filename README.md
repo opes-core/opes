@@ -49,22 +49,6 @@ The information provided by OPES is for educational, research and informational 
 |                                          | KL-Ambiguity Robust Fractional Kelly               |
 |                                          | Wasserstein-Ambiguity Robust Maximum Mean Return   |
 
-
-## Slippage Models
-- Constant
-- Gamma
-- Lognormal
-- Inverse Gaussian
-- Compound Poisson-Lognormal
-
-## Regularization Schemes
-- L1
-- L2
-- L-infinity
-- Entropy
-- Weight Variance
-- Mean Pairwise Absolute Deviation
-
 ## Metrics
 
 | Portfolio Metrics        | Backtest Metrics             |
@@ -81,6 +65,19 @@ The information provided by OPES is for educational, research and informational 
 |                          | Kurtosis                     |
 |                          | Omega Ratio                  |
 
+## Other Features
+
+| Slippage Models            | Regularization Schemes                    |
+| -------------------------- | ----------------------------------------- |
+| Constant                   | L1 Regularization                         |
+| Gamma                      | L2 Regularization                         |
+| Lognormal                  | L-infinity Regularization                 |
+| Inverse Gaussian           | Entropy                                   |
+| Compound Poisson-Lognormal | Weight Variance                           |
+|                            | Mean Pairwise Absolute Deviation          |
+|                            | KL-Divergence from Uniform (Experimental) |
+|                            | JS-Divergence from Uniform (Experimental) |
+
 ---
 
 ## Upcoming Features (Unconfirmed)
@@ -88,6 +85,7 @@ The information provided by OPES is for educational, research and informational 
 These features are still in the works and may or may not appear in later updates:
 
 * Worst-Case Loss Optimization (Risk Measures)
+* Value-at-Risk (Risk Measures)
 * Hierarchical Risk Parity (Principled Heuristics)
 * Universal Portfolios (Online Learning)
 * Online Newton Step (Online Learning)
@@ -96,4 +94,3 @@ These features are still in the works and may or may not appear in later updates
 
   * Global Minimum Variance (GMV)
   * Mean–Variance Optimization (MVO)
-  * Kelly Criterion
