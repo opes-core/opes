@@ -86,21 +86,23 @@ class Optimizer(ABC):
             PortfolioError: If weights have not been calculated via optimization.
 
         !!! note "Notes:"
-            - All statistics are computed on the absolute value of weights, ensuring compatibility with long-short portfolios.
+            - All statistics are computed on absolute normalized weights (within the simplex), ensuring compatibility with long-short portfolios.
             - This method is diagnostic only and does not modify portfolio weights.
             - For meaningful interpretation, use these metrics in conjunction with risk and performance measures.
         """
         if self.weights is None:
             raise PortfolioError("Weights not optimized")
         else:
+            normalized_weights = np.abs(self.weights)
+            normalized_weights /= normalized_weights.sum() + 1e-12
             portfolio_entropy = -np.sum(
-                np.abs(self.weights) * np.log(np.abs(self.weights) + 1e-12)
+                np.abs(normalized_weights) * np.log(np.abs(normalized_weights) + 1e-12)
             )
-            herfindahl_index = np.sum(self.weights**2)
+            herfindahl_index = np.sum(normalized_weights**2)
             gini_coeff = np.mean(
-                np.abs(self.weights[:, None] - self.weights[None, :])
-            ) / (2 * np.mean(np.abs(self.weights)))
-            max_weight = np.max(np.abs(self.weights))
+                np.abs(normalized_weights[:, None] - normalized_weights[None, :])
+            ) / (2 * np.mean(np.abs(normalized_weights)))
+            max_weight = np.max(np.abs(normalized_weights))
             statistics = {
                 "tickers": self.tickers,
                 "weights": np.round(self.weights, 5),
@@ -116,7 +118,7 @@ class Optimizer(ABC):
         Cleans the portfolio weights by setting very small positions to zero.
 
         Any weight whose absolute value is below the specified `threshold` is replaced with zero.
-        This helps remove negligible allocations while keeping the array structure intact. This method 
+        This helps remove negligible allocations while keeping the array structure intact. This method
         requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
         defined other than `None`.
 

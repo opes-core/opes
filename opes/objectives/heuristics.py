@@ -475,7 +475,7 @@ class MaxDiversification(Optimizer):
             rng=seed,
         )
         if result.success:
-            self.weights = result.x
+            self.weights = result.x / (result.x.sum() + 1e-12)
             return self.weights
         else:
             raise OptimizationError(
@@ -840,7 +840,7 @@ class REPO(Optimizer):
             rng=seed,
         )
         if result.success:
-            self.weights = result.x
+            self.weights = result.x / (result.x.sum() + 1e-12)
             return self.weights
         else:
             raise OptimizationError(f"REPO optimization failed: {result.message}")

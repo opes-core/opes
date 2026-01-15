@@ -27,13 +27,13 @@ where $R(\\mathbf{w})$ encodes structural preferences over the weights $\\mathbf
 | `jsd`      | $\\ \\text{D}_{\\text{JSD}}(\\mathbf{w} \\| \mathbf{u})$                              | Measures Jensen-Shannon divergence from uniform weights.                                                                                |
 
 !!! note "Note"
-    For long-short portfolios, mathematically grounded regularizers such as `entropy`, `kld`, and `jsd` first normalize the weights 
+    For long-short portfolios, mathematically grounded regularizers such as `entropy`, `kld`, and `jsd` first normalize the weights
     and constrain them to the simplex before applying the regularization, ensuring mathematical coherence is not violated.
 
 !!! note "Temporary Note"
     Kullback-Leibler regularization and entropy are the exact same, since KL-divergence's prior distribution is uniform weights. However
     it is included so that it *may* be later updated with custom prior distribution (weights).
-    
+
 ---
 
 ### Portfolios without Regularization Support
@@ -78,6 +78,7 @@ from opes.errors import PortfolioError
 # Small epsilon for numerical stability
 _SMALL_EPSILON = 1e-12
 
+
 # Helper function for entropy regularization
 # Returns negative entropy value
 def _shannon_entropy(w):
@@ -90,6 +91,7 @@ def _shannon_entropy(w):
     neg_entropy = np.sum(w * np.log(w + _SMALL_EPSILON))
 
     return neg_entropy
+
 
 # Helper function for Kullback-Leibler regularization
 # Returns KL-Divergence value from uniform weights
@@ -107,6 +109,7 @@ def _kullback_leibler(w):
 
     return kl_reg
 
+
 # Helper function for Jensen-Shannon regularization
 # Returns JS-Divergence value from uniform weights
 def _jensen_shannon(w):
@@ -123,18 +126,20 @@ def _jensen_shannon(w):
 
     # Computing first and second KL terms for JSD
     first_kl = np.sum(w * np.log(w / (middle_man + _SMALL_EPSILON)))
-    second_kl = np.sum(equal_weight * np.log(equal_weight / (middle_man + _SMALL_EPSILON)))
+    second_kl = np.sum(
+        equal_weight * np.log(equal_weight / (middle_man + _SMALL_EPSILON))
+    )
 
     # Computing Jensen-Shannon divergence
     js_reg = (first_kl + second_kl) / 2
 
     return js_reg
 
+
 # Regularizer finding function
 # Accepts string and returns a function which can be activated while solving the objective
 def _find_regularizer(reg):
     regularizer_mapping = {
-
         # Quick regularizers
         None: lambda w: 0,
         "l1": lambda w: np.sum(np.abs(w)),
@@ -142,12 +147,11 @@ def _find_regularizer(reg):
         "l-inf": lambda w: np.max(np.abs(w)),
         "variance": lambda w: np.var(w) if len(w) >= 2 else 0,
         "mpad": lambda w: np.mean(np.abs(w[:, None] - w[None, :])),
-        
         # Regularizers using a helper function
         # The function is returned instead of lambda
         "entropy": _shannon_entropy,
         "kld": _kullback_leibler,
-        "jsd": _jensen_shannon
+        "jsd": _jensen_shannon,
     }
 
     # Checking regularizer validity

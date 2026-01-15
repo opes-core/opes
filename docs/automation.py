@@ -110,7 +110,34 @@ def refine_markdown_documentation():
     # Finishing Message
     print("PROCESSING FINISHED")
 
+# Function to format code using black
+def format_codebase():
+
+    # Folders for black to format
+    folders = [
+        BASE_DIR.parent / "opes",
+        BASE_DIR.parent / "tests"
+    ]
+
+    print("INITIATING BLACK FORMATTING")
+
+    # Execute PowerShell command to format
+    # formats tests and opes folders
+    for folder in folders:
+        try:
+            # Running the command for each folder
+            result = subprocess.run(
+                ["powershell", "-Command", f"black {folder}"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
+            print(f"ERROR: {folder} - {e.stderr}")
+
+    print("EXECUTED BLACK FORMATTING")
 
 if __name__ == "__main__":
     get_markdown_documentation()
     refine_markdown_documentation()
+    format_codebase()

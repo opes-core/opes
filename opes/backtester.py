@@ -82,12 +82,16 @@ class Backtester:
 
     def _backtest_integrity_check(
         self, optimizer, rebalance_freq, seed, cleanweights=False
-    ):  
+    ):
         # Checking train and test data validity
         if not isinstance(self.train, pd.DataFrame):
-            raise DataError(f"Invalid train data type. Expected pd.DataFrame, got {type(self.train)}")
+            raise DataError(
+                f"Invalid train data type. Expected pd.DataFrame, got {type(self.train)}"
+            )
         if not isinstance(self.test, pd.DataFrame):
-            raise DataError(f"Invalid test data type. Expected pd.DataFrame, got {type(self.train)}")
+            raise DataError(
+                f"Invalid test data type. Expected pd.DataFrame, got {type(self.train)}"
+            )
         # Checking train and test data length and format
         if len(self.train) < 5:
             raise DataError(

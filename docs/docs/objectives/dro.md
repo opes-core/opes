@@ -173,7 +173,7 @@ to be defined other than `None`.
 
 
 !!! note "Notes:"
-    - All statistics are computed on the absolute value of weights, ensuring compatibility with long-short portfolios.
+    - All statistics are computed on absolute normalized weights (within the simplex), ensuring compatibility with long-short portfolios.
     - This method is diagnostic only and does not modify portfolio weights.
     - For meaningful interpretation, use these metrics in conjunction with risk and performance measures.
 
@@ -330,7 +330,7 @@ to be defined other than `None`.
 
 
 !!! note "Notes:"
-    - All statistics are computed on the absolute value of weights, ensuring compatibility with long-short portfolios.
+    - All statistics are computed on absolute normalized weights (within the simplex), ensuring compatibility with long-short portfolios.
     - This method is diagnostic only and does not modify portfolio weights.
     - For meaningful interpretation, use these metrics in conjunction with risk and performance measures.
 
@@ -494,7 +494,7 @@ to be defined other than `None`.
 
 
 !!! note "Notes:"
-    - All statistics are computed on the absolute value of weights, ensuring compatibility with long-short portfolios.
+    - All statistics are computed on absolute normalized weights (within the simplex), ensuring compatibility with long-short portfolios.
     - This method is diagnostic only and does not modify portfolio weights.
     - For meaningful interpretation, use these metrics in conjunction with risk and performance measures.
 

@@ -62,6 +62,41 @@ def can_instantiate(cls):
     return True
 
 
+# Function to check the validity of various statistics produced by the optimizer
+# Checks entropy, HI, Gini and maxweight validity
+def statistics_checker(stats):
+
+    # Error dict
+    errors = {}
+
+    # Finite checkinf function
+    # Also returns False if x is None
+    def is_finite(x):
+        return isinstance(x, (int, float, np.floating)) and np.isfinite(x)
+
+    # Entropy: Must be finite and greater than 0
+    val = stats.get("portfolio_entropy")
+    if not is_finite(val) or val < 0:
+        errors["portfolio_entropy"] = f"Invalid entropy: {val}"
+
+    # Herfindahl index: Must be within bounds (0,1]
+    val = stats.get("herfindahl_index")
+    if not is_finite(val) or not (0 < val <= 1):
+        errors["herfindahl_index"] = f"Invalid HI: {val}"
+
+    # Gini coefficient: Must be within bounds [0,1]
+    val = stats.get("gini_coefficient")
+    if not is_finite(val) or not (0 <= val <= 1):
+        errors["gini_coefficient"] = f"Invalid Gini: {val}"
+
+    # Absolute max weight: Must be within bounds (0, 1]
+    val = stats.get("absolute_max_weight")
+    if not is_finite(val) or not (0 < val <= 1):
+        errors["absolute_max_weight"] = f"Invalid max weight: {val}"
+
+    return errors
+
+
 # Smoke test function on all optimizers discovered
 # Optimizes each optimizer with the same data and produces resultant weights
 # Nans are also checked
@@ -75,48 +110,55 @@ def test_all_optimizers_smoke(prices_df):
     failures = {}
     stochastic = {}
     stats_fails = {}
+    doesnt_sum_to_one = {}
+
     for cls in optimizers:
+
         # If the optimizer cannot be instantiated, it is skipped
+        # Filters base optimizer ABC
         if not can_instantiate(cls):
             continue
 
-        # Trying to optimize
-        # This checks the base optimization related errors if any
+        # ---------- OPTIMIZATION CHECK ----------
         try:
             # Optimizing two times to compare weights
             opt = cls()
 
-            # Checking for seed and weight_bounds, utilizing them if they are present
+            # Checking for weight_bounds, utilizing it if present
             sig = inspect.signature(opt.optimize)
             kwargs = {}
-            if "seed" in sig.parameters:
-                kwargs["seed"] = 100
+
             if "weight_bounds" in sig.parameters:
                 kwargs["weight_bounds"] = (-0.5, 1)
+
+            # Optimizing twice
             first_result = opt.optimize(prices_df, **kwargs)
             second_result = opt.optimize(prices_df, **kwargs)
+
             # Checking if the weights are equal (close) and adding to dictionary of stochastic outputs
             if not np.allclose(first_result, second_result):
                 stochastic[cls.__name__] = (first_result, second_result)
 
-        # If an optimization error occurs, the optimizer class is added to dictionary along with the error message
+            # Checking if the weights sum to 1
+            if not np.isclose(first_result.sum(), 1):
+                doesnt_sum_to_one[cls.__name__] = f"Does not sum to 1: {first_result}"
         except Exception as e:
             failures[cls.__name__] = str(e)
             continue
 
-        # Trying to compute statistics
+        # ---------- STATISTICS CHECK ----------
         try:
             statistics = opt.stats()
-            # Adding to stats_fails dictionary if any statistics are missing with custom message
-            missing = [i for i in STAT_FIELDS if i not in statistics]
-            if missing:
-                stats_fails[cls.__name__] = f"Missing fields: {missing}"
-
-        # If statistics fail to be computed, it is added to stats_fails
+            # Adding to stats_fails dictionary if any statistics check fails
+            statistics_checker_errors = statistics_checker(statistics)
+            if statistics_checker_errors:
+                stats_fails[cls.__name__] = (
+                    f"Wrong/Missing statistic value(s): {statistics_checker_errors}"
+                )
         except Exception as e:
             stats_fails[cls.__name__] = str(e)
 
-        # Checking if the result obtained is valid
+        # ---------- RESULT VALIDITY ----------
         assert first_result is not None, f"{cls.__name__} did not produce weights."
         assert not np.any(np.isnan(first_result)), f"{cls.__name__} produced NaNs."
         assert (
@@ -126,12 +168,17 @@ def test_all_optimizers_smoke(prices_df):
             np.isfinite(first_result)
         ), f"{cls.__name__} produced infinite weights."
 
-    # Checking for failures, non-deterministic optimizers and statistic failures
+    # Asserting failures
     assert not failures, "Optimizers failed to compute weights:\n" + "\n".join(
         f"{k}: {v}" for k, v in failures.items()
     )
     assert not stochastic, "Optimizers produced stochastic weights:\n" + "\n".join(
         f"{k}: {v}" for k, v in stochastic.items()
+    )
+    assert (
+        not doesnt_sum_to_one
+    ), "Optimizers returned weights that do not sum to 1:\n" + "\n".join(
+        f"{k}: {v}" for k, v in doesnt_sum_to_one.items()
     )
     assert not stats_fails, "Optimizers failed to compute statistics:\n" + "\n".join(
         f"{k}: {v}" for k, v in stats_fails.items()
