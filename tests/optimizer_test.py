@@ -97,7 +97,7 @@ def statistics_checker(stats):
     return errors
 
 
-# Smoke test function on all optimizers discovered
+# Test function on all optimizers discovered
 # Optimizes each optimizer with the same data and produces resultant weights
 # Nans are also checked
 def test_all_optimizers_smoke(prices_df):

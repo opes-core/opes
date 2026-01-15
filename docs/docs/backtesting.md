@@ -186,7 +186,8 @@ commonly used in finance, including volatility, drawdowns, and tail risk metrics
     - `'omega_0'`: Omega ratio (gain/loss ratio).
 
 !!! note "Notes:"
-    - Volatility, mean, total return, VaR and CVaR are scaled to percentages.
+    - Volatility, mean return, total return, maximum drawdown, VaR and CVaR are scaled to percentages.
+    - VaR, CVaR and maximum drawdown are returned as loss values (usually positive).
     - Tail risk metrics (VaR, CVaR) are based on the lower 5% of returns.
     - Returns should be cleaned (NaNs removed) before passing to this method.
 

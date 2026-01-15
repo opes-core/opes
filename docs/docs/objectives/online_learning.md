@@ -55,7 +55,7 @@ def clean_weights(threshold=1e-08)
 Cleans the portfolio weights by setting very small positions to zero.
 
 Any weight whose absolute value is below the specified `threshold` is replaced with zero.
-This helps remove negligible allocations while keeping the array structure intact. This method 
+This helps remove negligible allocations while keeping the array structure intact. This method
 requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
 defined other than `None`.
 
@@ -247,7 +247,7 @@ def clean_weights(threshold=1e-08)
 Cleans the portfolio weights by setting very small positions to zero.
 
 Any weight whose absolute value is below the specified `threshold` is replaced with zero.
-This helps remove negligible allocations while keeping the array structure intact. This method 
+This helps remove negligible allocations while keeping the array structure intact. This method
 requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
 defined other than `None`.
 
