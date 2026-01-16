@@ -32,6 +32,7 @@
 
 ### **Risk Measures**
 
+* **Morgan, J. P. (1996).** RiskMetrics-Technical Document. *Morgan Guaranty Trust Company*.
 * **Artzner, P., Delbaen, F., Eber, J.-M., & Heath, D. (1999).** Coherent Measures of Risk. *Mathematical Finance*, 9(3), 203–228.
 * **Rockafellar, R. T., & Uryasev, S. (2000).** Optimization of Conditional Value-at-Risk. *Journal of Risk*, 2(3), 21–41.
 * **Rockafellar, R. T., & Uryasev, S. (2002).** Conditional Value-at-Risk for General Loss Distributions. *Journal of Banking & Finance*, 26(7), 1443–1471.
@@ -53,3 +54,4 @@
 * **Ben-Tal, A., & Nemirovski, A. (1999).** Robust solutions of uncertain linear programs. *Operations Research Letters*, 25(1), 1–13. https://doi.org/10.1016/S0167-6377(99)00016-4
 * **Hu, Z., & Hong, L. J. (2013).** Kullback-Leibler divergence constrained distributionally robust optimization. Available at *Optimization Online*, 1(2), 9.
 * **Mohajerin Esfahani, P., Kuhn, D.** Data-driven distributionally robust optimization using the Wasserstein metric: performance guarantees and tractable reformulations. *Math. Program.* 171, 115–166 (2018). https://doi.org/10.1007/s10107-017-1172-1
+* **Blanchet, J., Chen, L., & Zhou, X. Y. (2022).** Distributionally robust mean-variance portfolio selection with Wasserstein distances. *Management science*, 68(9), 6382-6410.

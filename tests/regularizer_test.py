@@ -44,6 +44,7 @@ def weight_check(w_base, w_reg):
         return True
 
 
+# Function to test all regularizers available
 def test_all_regularizers(prices_df):
 
     # Importing one SLSQP based optimizer and one differential_evolution based optimizer

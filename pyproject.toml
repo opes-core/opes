@@ -7,7 +7,7 @@ packages = ["opes"]
 
 [project]
 name = "opes"
-version = "0.6.0"
+version = "0.7.0"
 description = "A research-focused portfolio optimization and backtesting engine."
 readme = "README.md"
 requires-python = ">=3.10"

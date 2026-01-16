@@ -100,7 +100,7 @@ def statistics_checker(stats):
 # Test function on all optimizers discovered
 # Optimizes each optimizer with the same data and produces resultant weights
 # Nans are also checked
-def test_all_optimizers_smoke(prices_df):
+def test_all_optimizers(prices_df):
 
     # Checking if optimizers are discovered
     optimizers = discover_optimizer_classes()

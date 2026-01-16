@@ -50,6 +50,8 @@ The information provided by OPES is for educational, research and informational 
 |                                          | KL-Ambiguity Robust Kelly                          |
 |                                          | KL-Ambiguity Robust Fractional Kelly               |
 |                                          | Wasserstein-Ambiguity Robust Maximum Mean Return   |
+|                                          | Wasserstein-Ambiguity Robust Minimum Variance      |
+|                                          | Wasserstein-Ambiguity Robust Mean-Variance         |
 
 ## Metrics
 
@@ -90,7 +92,3 @@ These features are still in the works and may or may not appear in later updates
 * Universal Portfolios (Online Learning)
 * Online Newton Step (Online Learning)
 * ADA-BARRONS (Online Learning)
-* Wasserstein Ambiguity Duals (Distributionally Robust)
-
-  * Global Minimum Variance (GMV)
-  * Mean–Variance Optimization (MVO)

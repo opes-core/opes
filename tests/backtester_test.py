@@ -182,7 +182,7 @@ def validate_metrics_output(metrics):
 
 # Backtester testing function
 # Tests both static and rolling backtests
-def test_all_optimizers_smoke(prices_df):
+def test_backtest_engine(prices_df):
 
     from opes.backtester import Backtester
 
