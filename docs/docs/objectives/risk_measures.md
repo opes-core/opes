@@ -1051,6 +1051,410 @@ to be defined other than `None`.
     - This method is diagnostic only and does not modify portfolio weights.
     - For meaningful interpretation, use these metrics in conjunction with risk and performance measures.
 
+## `VaR`
+
+```python
+class VaR(confidence=0.95, reg=None, strength=1)
+```
+
+Value-at-Risk optimization.
+
+Value-at-Risk (VaR), widely used in risk management and regulatory frameworks,
+constructs portfolios by controlling losses at a fixed confidence level over a given time horizon.
+VaR summarizes downside risk via a quantile of the return distribution, making it intuitive and
+easily communicable. However, Value-at-Risk is not a coherent risk measure, as it violates
+subadditivity. Consequently, portfolio diversification can increase measured risk, undermining the
+theoretical soundness of VaR-based optimization.
+
+**Args**
+
+- `confidence` (*float, optional*): The confidence level for tail calculation. Must be bounded within (0,1). Defaults to `0.95`.
+- `reg` (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
+- `strength` (*float, optional*): Strength of the regularization. Defaults to `1`.
+
+
+### Methods
+
+#### `clean_weights`
+
+```python
+def clean_weights(threshold=1e-08)
+```
+
+Cleans the portfolio weights by setting very small positions to zero.
+
+Any weight whose absolute value is below the specified `threshold` is replaced with zero.
+This helps remove negligible allocations while keeping the array structure intact. This method
+requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
+defined other than `None`.
+
+!!! warning "Warning:"
+    This method modifies the existing portfolio weights in place. After cleaning, re-optimization
+    is required to recover the original weights.
+
+**Args**
+
+- `threshold` (*float, optional*): Float specifying the minimum absolute weight to retain. Defaults to `1e-8`.
+
+
+**Returns:**
+
+- `numpy.ndarray`: Cleaned and re-normalized portfolio weight vector.
+
+**Raises**
+
+- `PortfolioError`: If weights have not been calculated via optimization.
+
+
+!!! note "Notes:"
+    - Weights are cleaned using absolute values, making this method compatible with long-short portfolios.
+    - Re-normalization ensures the portfolio remains properly scaled after cleaning.
+    - Increasing threshold promotes sparsity but may materially alter the portfolio composition.
+
+#### `optimize`
+
+```python
+def optimize(data=None, seed=100, **kwargs)
+```
+
+Solves the Value-at-Risk objective:
+
+$$
+\min_{\mathbf{w}} \ \left\{ \ell \mid \mathbb{P}(-\mathbf{w}^\top \mathbf{r} \le \ell) \ge \alpha \right\} + \lambda R(\mathbf{w})
+$$
+
+!!! warning "Warning"
+    Since the VaR objective is generally non-convex, SciPy's `differential_evolution` optimizer
+    is used to obtain more robust solutions. This approach incurs significantly higher computational cost and should
+    be used with care.
+
+!!! note "Note"
+    Asset weight bounds are defaulted to (0,1).
+
+**Args**
+
+- `data` (*pd.DataFrame*): Ticker price data in either multi-index or single-index formats. Examples are given below:
+  ```
+  # Single-Index Example
+  Ticker           TSLA      NVDA       GME        PFE       AAPL  ...
+  Date
+  2015-01-02  14.620667  0.483011  6.288958  18.688917  24.237551  ...
+  2015-01-05  14.006000  0.474853  6.460137  18.587513  23.554741  ...
+  2015-01-06  14.085333  0.460456  6.268492  18.742599  23.556952  ...
+  2015-01-07  14.063333  0.459257  6.195926  18.999102  23.887287  ...
+  2015-01-08  14.041333  0.476533  6.268492  19.386841  24.805082  ...
+  ...
+
+  # Multi-Index Example Structure (OHLCV)
+  Columns:
+  + Ticker (e.g. GME, PFE, AAPL, ...)
+  - Open
+  - High
+  - Low
+  - Close
+  - Volume
+  ```
+- `seed` (*int or None, optional*): Seed for differential evolution solver. Defaults to `100` to preserve deterministic outputs.
+- `**kwargs` (*optional*): Included for interface consistency, allowing the backtesting engine to pass additional or optimizer-specific arguments that may be safely ignored by this optimizer.
+
+
+**Returns:**
+
+- `np.ndarray`: Vector of optimized portfolio weights.
+
+**Raises**
+
+- `DataError`: For any data mismatch during integrity check.
+- `OptimizationError`: If `differential_evolution` solver fails to solve.
+
+
+!!! example "Example:"
+    ```python
+    # Importing the VaR module
+    from opes.objectives.risk_measures import VaR
+
+    # Let this be your ticker data
+    training_data = some_data()
+
+    # Initialize with custom confidence value and regularization
+    var_portfolio = VaR(confidence=0.99, reg='entropy', strength=0.01)
+
+    # Optimize portfolio with custom seed
+    weights = var_portfolio.optimize(data=training_data, seed=46)
+    ```
+
+#### `set_regularizer`
+
+```python
+def set_regularizer(reg=None, strength=1)
+```
+
+Updates the regularization function and its penalty strength.
+
+This method updates both the regularization function and its associated
+penalty strength. Useful for changing the behaviour of the optimizer without
+initiating a new one.
+
+**Args**
+
+- `reg` (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
+- `strength` (*float, optional*): Strength of the regularization. Defaults to `1`.
+
+
+!!! example "Example:"
+    ```python
+    # Import the VaR class
+    from opes.objectives.heuristics import VaR
+
+    # Set with 'entropy' regularization
+    optimizer = VaR(reg='entropy', strength=0.01)
+
+    # --- Do Something with `optimizer` ---
+    optimizer.optimize(data=some_data())
+
+    # Change regularizer using `set_regularizer`
+    optimizer.set_regularizer(reg='l1', strength=0.02)
+
+    # --- Do something else with new `optimizer` ---
+    optimizer.optimize(data=some_data())
+    ```
+
+#### `stats`
+
+```python
+def stats()
+```
+
+Calculates and returns portfolio concentration and diversification statistics.
+
+These statistics help users to inspect portfolio's overall concentration in
+allocation. For the method to work, the optimizer must have been initialized, i.e.
+the `optimize()` method should have been called at least once for `self.weights`
+to be defined other than `None`.
+
+**Returns:**
+
+- A `dict` containing the following keys:
+    - `'tickers'` (*list*): A list of tickers used for optimization.
+    - `'weights'` (*np.ndarry*): Portfolio weights, output from optimization.
+    - `'portfolio_entropy'` (*float*): Shannon entropy computed on portfolio weights.
+    - `'herfindahl_index'` (*float*): Herfindahl Index value, computed on portfolio weights.
+    - `'gini_coefficient'` (*float*): Gini Coefficient value, computed on portfolio weights.
+    - `'absolute_max_weight'` (*float*): Absolute maximum allocation for an asset.
+
+**Raises**
+
+- `PortfolioError`: If weights have not been calculated via optimization.
+
+
+!!! note "Notes:"
+    - All statistics are computed on absolute normalized weights (within the simplex), ensuring compatibility with long-short portfolios.
+    - This method is diagnostic only and does not modify portfolio weights.
+    - For meaningful interpretation, use these metrics in conjunction with risk and performance measures.
+
+## `WorstCaseLoss`
+
+```python
+class WorstCaseLoss(reg=None, strength=0)
+```
+
+Worst-Case Loss optimization.
+
+Worst-Case Loss optimization constructs portfolios by directly minimizing
+the maximum potential loss across all scenarios, making it the most
+conservative risk measure. Unlike VaR, CVaR or EVaR, which focus on
+particular quantiles of the loss distribution, this approach ignores
+probabilities entirely and concentrates solely on the worst possible
+outcome. Mathematically, it can be expressed as a minimax problem, and in
+the limit, it coincides with several other risk frameworks: as the
+confidence level of CVaR, EVaR or VaR, $\alpha \to 1$ and as the
+risk-aversion parameter in Entropic Risk Measure, $\theta \to \infty$.
+
+**Args**
+
+- `reg` (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
+- `strength` (*float, optional*): Strength of the regularization. Defaults to `1`.
+
+
+### Methods
+
+#### `clean_weights`
+
+```python
+def clean_weights(threshold=1e-08)
+```
+
+Cleans the portfolio weights by setting very small positions to zero.
+
+Any weight whose absolute value is below the specified `threshold` is replaced with zero.
+This helps remove negligible allocations while keeping the array structure intact. This method
+requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
+defined other than `None`.
+
+!!! warning "Warning:"
+    This method modifies the existing portfolio weights in place. After cleaning, re-optimization
+    is required to recover the original weights.
+
+**Args**
+
+- `threshold` (*float, optional*): Float specifying the minimum absolute weight to retain. Defaults to `1e-8`.
+
+
+**Returns:**
+
+- `numpy.ndarray`: Cleaned and re-normalized portfolio weight vector.
+
+**Raises**
+
+- `PortfolioError`: If weights have not been calculated via optimization.
+
+
+!!! note "Notes:"
+    - Weights are cleaned using absolute values, making this method compatible with long-short portfolios.
+    - Re-normalization ensures the portfolio remains properly scaled after cleaning.
+    - Increasing threshold promotes sparsity but may materially alter the portfolio composition.
+
+#### `optimize`
+
+```python
+def optimize(data=None, seed=100, **kwargs)
+```
+
+Solves the Worst-Case Loss objective:
+
+$$
+\min_{\mathbf{w}} \ \max_i (-\mathbf{w}^\top \mathbf{r}_i) + \lambda R(\mathbf{w})
+$$
+
+!!! warning "Warning"
+    Since the Worst-Case Loss objective is non-differentiable at switching points, SciPy's `differential_evolution` optimizer
+    is used to obtain more robust solutions. This approach incurs significantly higher computational cost and should
+    be used with care.
+
+!!! note "Note"
+    Asset weight bounds are defaulted to (0,1).
+
+**Args**
+
+- `data` (*pd.DataFrame*): Ticker price data in either multi-index or single-index formats. Examples are given below:
+  ```
+  # Single-Index Example
+  Ticker           TSLA      NVDA       GME        PFE       AAPL  ...
+  Date
+  2015-01-02  14.620667  0.483011  6.288958  18.688917  24.237551  ...
+  2015-01-05  14.006000  0.474853  6.460137  18.587513  23.554741  ...
+  2015-01-06  14.085333  0.460456  6.268492  18.742599  23.556952  ...
+  2015-01-07  14.063333  0.459257  6.195926  18.999102  23.887287  ...
+  2015-01-08  14.041333  0.476533  6.268492  19.386841  24.805082  ...
+  ...
+
+  # Multi-Index Example Structure (OHLCV)
+  Columns:
+  + Ticker (e.g. GME, PFE, AAPL, ...)
+  - Open
+  - High
+  - Low
+  - Close
+  - Volume
+  ```
+- `seed` (*int or None, optional*): Seed for differential evolution solver. Defaults to `100` to preserve deterministic outputs.
+- `**kwargs` (*optional*): Included for interface consistency, allowing the backtesting engine to pass additional or optimizer-specific arguments that may be safely ignored by this optimizer.
+
+
+**Returns:**
+
+- `np.ndarray`: Vector of optimized portfolio weights.
+
+**Raises**
+
+- `DataError`: For any data mismatch during integrity check.
+- `OptimizationError`: If `differential_evolution` solver fails to solve.
+
+
+!!! example "Example:"
+    ```python
+    # Importing the worst-case loss module
+    from opes.objectives.risk_measures import WorstCaseLoss
+
+    # Let this be your ticker data
+    training_data = some_data()
+
+    # Initialize with custom regularization
+    worst_case_portfolio = WorstCaseLoss(reg='entropy', strength=0.02)
+
+    # Optimize portfolio
+    weights = worst_case_portfolio.optimize(data=training_data)
+    ```
+
+#### `set_regularizer`
+
+```python
+def set_regularizer(reg=None, strength=1)
+```
+
+Updates the regularization function and its penalty strength.
+
+This method updates both the regularization function and its associated
+penalty strength. Useful for changing the behaviour of the optimizer without
+initiating a new one.
+
+**Args**
+
+- `reg` (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
+- `strength` (*float, optional*): Strength of the regularization. Defaults to `1`.
+
+
+!!! example "Example:"
+    ```python
+    # Import the WorstCaseLoss class
+    from opes.objectives.risk_measures import WorstCaseLoss
+
+    # Set with 'entropy' regularization
+    optimizer = WorstCaseLoss(reg='entropy', strength=0.01)
+
+    # --- Do Something with `optimizer` ---
+    optimizer.optimize(data=some_data())
+
+    # Change regularizer using `set_regularizer`
+    optimizer.set_regularizer(reg='l1', strength=0.02)
+
+    # --- Do something else with new `optimizer` ---
+    optimizer.optimize(data=some_data())
+    ```
+
+#### `stats`
+
+```python
+def stats()
+```
+
+Calculates and returns portfolio concentration and diversification statistics.
+
+These statistics help users to inspect portfolio's overall concentration in
+allocation. For the method to work, the optimizer must have been initialized, i.e.
+the `optimize()` method should have been called at least once for `self.weights`
+to be defined other than `None`.
+
+**Returns:**
+
+- A `dict` containing the following keys:
+    - `'tickers'` (*list*): A list of tickers used for optimization.
+    - `'weights'` (*np.ndarry*): Portfolio weights, output from optimization.
+    - `'portfolio_entropy'` (*float*): Shannon entropy computed on portfolio weights.
+    - `'herfindahl_index'` (*float*): Herfindahl Index value, computed on portfolio weights.
+    - `'gini_coefficient'` (*float*): Gini Coefficient value, computed on portfolio weights.
+    - `'absolute_max_weight'` (*float*): Absolute maximum allocation for an asset.
+
+**Raises**
+
+- `PortfolioError`: If weights have not been calculated via optimization.
+
+
+!!! note "Notes:"
+    - All statistics are computed on absolute normalized weights (within the simplex), ensuring compatibility with long-short portfolios.
+    - This method is diagnostic only and does not modify portfolio weights.
+    - For meaningful interpretation, use these metrics in conjunction with risk and performance measures.
+
 
 ---
 

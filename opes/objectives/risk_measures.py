@@ -22,12 +22,173 @@ crises and motivate more robust portfolio construction.
 
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize
+from scipy.optimize import minimize, differential_evolution
 
 from opes.objectives.base_optimizer import Optimizer
 from ..regularizer import _find_regularizer
 from ..utils import extract_trim, test_integrity, find_constraint
 from ..errors import OptimizationError, PortfolioError
+
+
+class VaR(Optimizer):
+    """
+    Value-at-Risk optimization.
+
+    Value-at-Risk (VaR), widely used in risk management and regulatory frameworks,
+    constructs portfolios by controlling losses at a fixed confidence level over a given time horizon.
+    VaR summarizes downside risk via a quantile of the return distribution, making it intuitive and
+    easily communicable. However, Value-at-Risk is not a coherent risk measure, as it violates
+    subadditivity. Consequently, portfolio diversification can increase measured risk, undermining the
+    theoretical soundness of VaR-based optimization.
+    """
+
+    def __init__(self, confidence=0.95, reg=None, strength=1):
+        """
+        Args:
+            confidence (*float, optional*): The confidence level for tail calculation. Must be bounded within (0,1). Defaults to `0.95`.
+            reg (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
+            strength (*float, optional*): Strength of the regularization. Defaults to `1`.
+        """
+        self.identity = "var"
+        self.reg = _find_regularizer(reg)
+        self.strength = strength
+        self.alpha = confidence
+
+        self.tickers = None
+        self.weights = None
+
+    def _prepare_optimization_inputs(self, data):
+        # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
+        self.tickers, data = extract_trim(data)
+        self.weights = np.array(
+            np.ones(len(self.tickers)) / len(self.tickers), dtype=float
+        )
+
+        # Functions to test data integrity and find optimization constraint
+        test_integrity(
+            tickers=self.tickers,
+            confidence=self.alpha,
+        )
+        return data
+
+    def optimize(self, data=None, seed=100, **kwargs):
+        """
+        Solves the Value-at-Risk objective:
+
+        $$
+        \\min_{\\mathbf{w}} \\ \\left\\{ \\ell \\mid \\mathbb{P}(-\\mathbf{w}^\\top \\mathbf{r} \\le \\ell) \\ge \\alpha \\right\\} + \\lambda R(\\mathbf{w})
+        $$
+
+        !!! warning "Warning"
+            Since the VaR objective is generally non-convex, SciPy's `differential_evolution` optimizer
+            is used to obtain more robust solutions. This approach incurs significantly higher computational cost and should
+            be used with care.
+
+        !!! note "Note"
+            Asset weight bounds are defaulted to (0,1).
+
+        Args:
+            data (*pd.DataFrame*): Ticker price data in either multi-index or single-index formats. Examples are given below:
+                ```
+                # Single-Index Example
+                Ticker           TSLA      NVDA       GME        PFE       AAPL  ...
+                Date
+                2015-01-02  14.620667  0.483011  6.288958  18.688917  24.237551  ...
+                2015-01-05  14.006000  0.474853  6.460137  18.587513  23.554741  ...
+                2015-01-06  14.085333  0.460456  6.268492  18.742599  23.556952  ...
+                2015-01-07  14.063333  0.459257  6.195926  18.999102  23.887287  ...
+                2015-01-08  14.041333  0.476533  6.268492  19.386841  24.805082  ...
+                ...
+
+                # Multi-Index Example Structure (OHLCV)
+                Columns:
+                + Ticker (e.g. GME, PFE, AAPL, ...)
+                - Open
+                - High
+                - Low
+                - Close
+                - Volume
+                ```
+            seed (*int or None, optional*): Seed for differential evolution solver. Defaults to `100` to preserve deterministic outputs.
+            `**kwargs` (*optional*): Included for interface consistency, allowing the backtesting engine to pass additional or optimizer-specific arguments that may be safely ignored by this optimizer.
+
+        **Returns:**
+
+        - `np.ndarray`: Vector of optimized portfolio weights.
+
+        Raises:
+            DataError: For any data mismatch during integrity check.
+            OptimizationError: If `differential_evolution` solver fails to solve.
+
+        !!! example "Example:"
+            ```python
+            # Importing the VaR module
+            from opes.objectives.risk_measures import VaR
+
+            # Let this be your ticker data
+            training_data = some_data()
+
+            # Initialize with custom confidence value and regularization
+            var_portfolio = VaR(confidence=0.99, reg='entropy', strength=0.01)
+
+            # Optimize portfolio with custom seed
+            weights = var_portfolio.optimize(data=training_data, seed=46)
+            ```
+        """
+        # Preparing optimization and finding constraint
+        trimmed_return_data = self._prepare_optimization_inputs(data)
+
+        # Optimization objective and results
+        def f(w):
+            w = w / w.sum()
+            X = trimmed_return_data @ w
+
+            return -np.quantile(X, 1 - self.alpha) + self.strength * self.reg(w)
+
+        result = differential_evolution(
+            f,
+            strategy="randtobest1bin",
+            bounds=[(0, 1) for _ in range(len(self.weights))],
+            rng=seed,
+        )
+        if result.success:
+            self.weights = result.x / (result.x.sum() + 1e-12)
+            return self.weights
+        else:
+            raise OptimizationError(f"VaR optimization failed: {result.message}")
+
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        This method updates both the regularization function and its associated
+        penalty strength. Useful for changing the behaviour of the optimizer without
+        initiating a new one.
+
+        Args:
+            reg (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
+            strength (*float, optional*): Strength of the regularization. Defaults to `1`.
+
+        !!! example "Example:"
+            ```python
+            # Import the VaR class
+            from opes.objectives.heuristics import VaR
+
+            # Set with 'entropy' regularization
+            optimizer = VaR(reg='entropy', strength=0.01)
+
+            # --- Do Something with `optimizer` ---
+            optimizer.optimize(data=some_data())
+
+            # Change regularizer using `set_regularizer`
+            optimizer.set_regularizer(reg='l1', strength=0.02)
+
+            # --- Do something else with new `optimizer` ---
+            optimizer.optimize(data=some_data())
+            ```
+        """
+        self.reg = _find_regularizer(reg)
+        self.strength = strength
 
 
 class CVaR(Optimizer):
@@ -890,6 +1051,170 @@ class EntropicRisk(Optimizer):
 
             # Set with 'entropy' regularization
             optimizer = EntropicRisk(reg='entropy', strength=0.01)
+
+            # --- Do Something with `optimizer` ---
+            optimizer.optimize(data=some_data())
+
+            # Change regularizer using `set_regularizer`
+            optimizer.set_regularizer(reg='l1', strength=0.02)
+
+            # --- Do something else with new `optimizer` ---
+            optimizer.optimize(data=some_data())
+            ```
+        """
+        self.reg = _find_regularizer(reg)
+        self.strength = strength
+
+
+class WorstCaseLoss(Optimizer):
+    """
+    Worst-Case Loss optimization.
+
+    Worst-Case Loss optimization constructs portfolios by directly minimizing
+    the maximum potential loss across all scenarios, making it the most
+    conservative risk measure. Unlike VaR, CVaR or EVaR, which focus on
+    particular quantiles of the loss distribution, this approach ignores
+    probabilities entirely and concentrates solely on the worst possible
+    outcome. Mathematically, it can be expressed as a minimax problem, and in
+    the limit, it coincides with several other risk frameworks: as the
+    confidence level of CVaR, EVaR or VaR, $\\alpha \\to 1$ and as the
+    risk-aversion parameter in Entropic Risk Measure, $\\theta \\to \\infty$.
+    """
+
+    def __init__(self, reg=None, strength=0):
+        """
+        Args:
+            reg (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
+            strength (*float, optional*): Strength of the regularization. Defaults to `1`.
+        """
+        self.identity = "worst-case-loss"
+        self.reg = _find_regularizer(reg)
+        self.strength = strength
+
+        self.tickers = None
+        self.weights = None
+
+    def _prepare_optimization_inputs(self, data):
+        # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
+        self.tickers, data = extract_trim(data)
+        self.weights = np.array(
+            np.ones(len(self.tickers)) / len(self.tickers), dtype=float
+        )
+
+        # Functions to test data integrity and find optimization constraint
+        test_integrity(
+            tickers=self.tickers,
+            weights=self.weights,
+        )
+        return data
+
+    def optimize(self, data=None, seed=100, **kwargs):
+        """
+        Solves the Worst-Case Loss objective:
+
+        $$
+        \\min_{\\mathbf{w}} \\ \\max_i (-\\mathbf{w}^\\top \\mathbf{r}_i) + \\lambda R(\\mathbf{w})
+        $$
+
+        !!! warning "Warning"
+            Since the Worst-Case Loss objective is non-differentiable at switching points, SciPy's `differential_evolution` optimizer
+            is used to obtain more robust solutions. This approach incurs significantly higher computational cost and should
+            be used with care.
+
+        !!! note "Note"
+            Asset weight bounds are defaulted to (0,1).
+
+        Args:
+            data (*pd.DataFrame*): Ticker price data in either multi-index or single-index formats. Examples are given below:
+                ```
+                # Single-Index Example
+                Ticker           TSLA      NVDA       GME        PFE       AAPL  ...
+                Date
+                2015-01-02  14.620667  0.483011  6.288958  18.688917  24.237551  ...
+                2015-01-05  14.006000  0.474853  6.460137  18.587513  23.554741  ...
+                2015-01-06  14.085333  0.460456  6.268492  18.742599  23.556952  ...
+                2015-01-07  14.063333  0.459257  6.195926  18.999102  23.887287  ...
+                2015-01-08  14.041333  0.476533  6.268492  19.386841  24.805082  ...
+                ...
+
+                # Multi-Index Example Structure (OHLCV)
+                Columns:
+                + Ticker (e.g. GME, PFE, AAPL, ...)
+                - Open
+                - High
+                - Low
+                - Close
+                - Volume
+                ```
+            seed (*int or None, optional*): Seed for differential evolution solver. Defaults to `100` to preserve deterministic outputs.
+            `**kwargs` (*optional*): Included for interface consistency, allowing the backtesting engine to pass additional or optimizer-specific arguments that may be safely ignored by this optimizer.
+
+        **Returns:**
+
+        - `np.ndarray`: Vector of optimized portfolio weights.
+
+        Raises:
+            DataError: For any data mismatch during integrity check.
+            OptimizationError: If `differential_evolution` solver fails to solve.
+
+        !!! example "Example:"
+            ```python
+            # Importing the worst-case loss module
+            from opes.objectives.risk_measures import WorstCaseLoss
+
+            # Let this be your ticker data
+            training_data = some_data()
+
+            # Initialize with custom regularization
+            worst_case_portfolio = WorstCaseLoss(reg='entropy', strength=0.02)
+
+            # Optimize portfolio
+            weights = worst_case_portfolio.optimize(data=training_data)
+            ```
+        """
+        # Preparing optimization and finding constraint
+        trimmed_return_data = self._prepare_optimization_inputs(data)
+
+        def f(w):
+            w = w / w.sum()
+            X = -trimmed_return_data @ w
+            worst_loss = np.max(X)
+
+            return worst_loss + self.strength * self.reg(w)
+
+        result = differential_evolution(
+            f,
+            strategy="randtobest1bin",
+            bounds=[(0, 1) for _ in range(len(self.weights))],
+            rng=seed,
+        )
+        if result.success:
+            self.weights = result.x / (result.x.sum() + 1e-12)
+            return self.weights
+        else:
+            raise OptimizationError(
+                f"Worst-Case Loss optimization failed: {result.message}"
+            )
+
+    def set_regularizer(self, reg=None, strength=1):
+        """
+        Updates the regularization function and its penalty strength.
+
+        This method updates both the regularization function and its associated
+        penalty strength. Useful for changing the behaviour of the optimizer without
+        initiating a new one.
+
+        Args:
+            reg (*str or None, optional*): Type of regularization to be used. Setting to `None` implies no regularizer. Defaults to `None`.
+            strength (*float, optional*): Strength of the regularization. Defaults to `1`.
+
+        !!! example "Example:"
+            ```python
+            # Import the WorstCaseLoss class
+            from opes.objectives.risk_measures import WorstCaseLoss
+
+            # Set with 'entropy' regularization
+            optimizer = WorstCaseLoss(reg='entropy', strength=0.01)
 
             # --- Do Something with `optimizer` ---
             optimizer.optimize(data=some_data())

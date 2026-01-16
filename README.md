@@ -29,7 +29,7 @@ The information provided by OPES is for educational, research and informational 
 |                                          | Kelly Criterion & Fractional Kelly                 |
 | **Markowitz Paradigm**                   | Maximum Mean Return                                |
 |                                          | Minimum Variance                                   |
-|                                          | Mean–Variance                                      |
+|                                          | Mean-Variance                                      |
 |                                          | Maximum Sharpe Ratio                               |
 | **Principled Heuristics**                | Uniform (1/N)                                      |
 |                                          | Risk Parity                                        |
@@ -37,11 +37,13 @@ The information provided by OPES is for educational, research and informational 
 |                                          | Softmax Mean                                       |
 |                                          | Maximum Diversification                            |
 |                                          | Return Entropy Portfolio Optimization              |
-| **Risk Measures**                        | Conditional Value at Risk (CVaR)                   |
-|                                          | Mean–CVaR                                          |
+| **Risk Measures**                        | Value at Risk (VaR)                                |
+|                                          | Conditional Value at Risk (CVaR)                   |
+|                                          | Mean-CVaR                                          |
 |                                          | Entropic Value at Risk (EVaR)                      |
-|                                          | Mean–EVaR                                          |
+|                                          | Mean-EVaR                                          |
 |                                          | Entropic Risk Measure                              |
+|                                          | Worst-Case Loss                                    |
 | **Online Learning**                      | Best Constant Rebalanced Portfolio (BCRP)          |
 |                                          | Exponential Gradient                               |
 | **Distributionally Robust Optimization** | KL-Ambiguity Robust Maximum Mean Return            |
@@ -84,8 +86,6 @@ The information provided by OPES is for educational, research and informational 
 
 These features are still in the works and may or may not appear in later updates:
 
-* Worst-Case Loss Optimization (Risk Measures)
-* Value-at-Risk (Risk Measures)
 * Hierarchical Risk Parity (Principled Heuristics)
 * Universal Portfolios (Online Learning)
 * Online Newton Step (Online Learning)

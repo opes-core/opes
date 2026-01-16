@@ -137,7 +137,27 @@ def format_codebase():
 
     print("EXECUTED BLACK FORMATTING")
 
+# Function to build documentation using mkdocs
+def build_documentation():
+
+    print("INITIATING DOCUMENTATION BUILD")
+
+    # Execute PowerShell command to build mkdocs documentation
+    try:
+        result = subprocess.run(
+            ["powershell", "-Command", f"mkdocs build"],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=str(BASE_DIR)
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"ERROR: {e.stderr}")
+
+    print("FINISH DOCUMENTATION BUILD")
+
 if __name__ == "__main__":
     get_markdown_documentation()
     refine_markdown_documentation()
     format_codebase()
+    build_documentation()
