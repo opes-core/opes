@@ -253,7 +253,7 @@ class SoftmaxMean(Optimizer):
         # Quick check for temperature validity
         if self.temperature <= 0:
             raise PortfolioError(
-                f"Invalid temperature. Expected within bounds (0, inf], got {self.temperature})"
+                f"Invalid temperature. Expected within bounds (0, inf), got {self.temperature})"
             )
 
         # Extracting mean and testing integrity

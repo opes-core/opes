@@ -3,8 +3,6 @@ All OPES optimizer objects expose a common set of methods with a consistent inte
 These methods share identical syntax and can be used uniformly across different portfolio
 constructions, independent of the optimizer's specific type or theoretical foundation.
 
----
-
 """
 
 from abc import ABC, abstractmethod

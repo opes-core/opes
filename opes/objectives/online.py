@@ -15,6 +15,8 @@ only once, in sequence.
 ---
 """
 
+from itertools import combinations
+
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
@@ -26,6 +28,171 @@ from ..errors import OptimizationError, PortfolioError
 
 # Small epsilon value for numerical stability
 EPSILON = 1e-8
+
+
+class UniversalPortfolios(Optimizer):
+    """
+    Cover's Universal Portfolio.
+
+    Cover's Universal Portfolio is a foundational algorithm in online portfolio
+    selection that constructs a portfolio as a wealth-weighted average of all
+    possible constant-rebalanced portfolios over the simplex. Introduced by
+    Thomas Cover, it belongs to the family of universal portfolio algorithms,
+    maintaining deterministically updated weights that asymptotically track the
+    performance of the best constant-rebalanced portfolio in hindsight. The
+    method leverages a combinatorial integration over the simplex or, in practice,
+    approximates it via sampling or grid discretization, ensuring parameter-free
+    portfolio growth in adversarial market environments.
+
+    !!! warning "Warning"
+        Grid-based Cover's UP scales combinatorially with the number of assets and
+        `grid_res`. Large values may cause severe memory and runtime issues. Use with caution.
+
+    """
+
+    def __init__(self, technique="sample", n_samples=100, dirichlet_conc=1, grid_res=3):
+        """
+        **Args:**
+
+        - `technique` (*str, optional*): Portfolio generation technique. Must be either `"sample"` or `"grid"`. Defaults to `"sample"`.
+            - `"sample"`: Generates portfolios stochastically using a Dirichlet distribution.
+            - `"grid"`: Generates portfolios deterministically using a simplex grid
+        - `n_samples` (*int, optional*): Number of portfolios to sample when `technique="sample"`. Ignored when `technique="grid"`. Defaults to `100`.
+        - `dirichlet_conc` (*float, optional*): Concentration parameter of the Dirichlet distribution used for stochastic portfolio sampling. Defaults to `1`.
+        - `grid_res` (*int, optional*): Resolution parameter for simplex grid construction when `technique="grid"`. Smaller values are recommended due to combinatorial growth. Defaults to `3`.
+        """
+        self.identity = "cover-up"
+        self.technique = technique.lower()
+        self.n_samples = n_samples
+        self.dirichlet_conc = dirichlet_conc
+        self.grid_res = grid_res
+
+        self.tickers = None
+        self.weights = None
+
+    def _return_sample_portfolios(self, rng_value):
+        ticker_length = len(self.tickers)
+        base_vector = np.full(ticker_length, self.dirichlet_conc)
+        rng = np.random.default_rng(seed=rng_value)
+        return rng.dirichlet(base_vector, size=self.n_samples)
+
+    def _return_grid_portfolios(self):
+        ticker_length = len(self.tickers)
+        bars = np.array(
+            list(
+                combinations(
+                    range(ticker_length + self.grid_res - 1), ticker_length - 1
+                )
+            )
+        )
+        counts = np.diff(
+            np.c_[
+                np.zeros(len(bars), int),
+                bars + 1,
+                np.full(len(bars), ticker_length + self.grid_res),
+            ],
+            axis=1,
+        )
+        return counts / self.grid_res
+
+    def _prepare_inputs(self, data):
+
+        # Quick validation check
+        if self.technique not in ["sample", "grid"]:
+            raise PortfolioError(
+                f"Invalid technique. Expected 'sample' or 'grid', got {self.technique}"
+            )
+
+        # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
+        self.tickers, data = extract_trim(data)
+        self.weights = np.array(
+            np.ones(len(self.tickers)) / len(self.tickers), dtype=float
+        )  # Placeholder, not important
+        return data
+
+    def optimize(self, data=None, seed=100, **kwargs):
+        """
+        Finds the Cover's Universal Portfolio:
+
+        $$
+        \\mathbf{w}_{\\text{cover}} = \\frac{ \\int_\\Delta \\mathbf{w} \\cdot W_T(\\mathbf{w}) \\ d\\mathbf{w}} {\\int_\\Delta W_T(\\mathbf{w}) \\ d\\mathbf{w}} \\approx \\frac{ \\sum_{\\mathbf{w} \\in \\mathcal P} \\mathbf{w} \\cdot W_T(\\mathbf{w})} {\\sum_{\\mathbf{w} \\in \\mathcal P} W_T(\\mathbf{w})}
+        $$
+
+        With $\\mathcal P \\sim \\text{Grid}(k)$ or $\\mathcal P \\sim \\text{Dirichlet}(\\alpha)$ depending upon user choice.
+
+        !!! note "Note"
+            Asset weight bounds are defaulted to (0,1).
+
+        Args:
+            data (*pd.DataFrame*): Ticker price data in either multi-index or single-index formats. Examples are given below:
+                ```
+                # Single-Index Example
+                Ticker           TSLA      NVDA       GME        PFE       AAPL  ...
+                Date
+                2015-01-02  14.620667  0.483011  6.288958  18.688917  24.237551  ...
+                2015-01-05  14.006000  0.474853  6.460137  18.587513  23.554741  ...
+                2015-01-06  14.085333  0.460456  6.268492  18.742599  23.556952  ...
+                2015-01-07  14.063333  0.459257  6.195926  18.999102  23.887287  ...
+                2015-01-08  14.041333  0.476533  6.268492  19.386841  24.805082  ...
+                ...
+
+                # Multi-Index Example Structure (OHLCV)
+                Columns:
+                + Ticker (e.g. GME, PFE, AAPL, ...)
+                - Open
+                - High
+                - Low
+                - Close
+                - Volume
+                ```
+            seed (*int or None, optional*): Seed for dirichlet sampling. Defaults to `100` to preserve deterministic outputs.
+            `**kwargs` (*optional*): Included for interface consistency, allowing the backtesting engine to pass additional or optimizer-specific arguments that may be safely ignored by this optimizer.
+
+        **Returns:**
+
+        - `np.ndarray`: Vector of optimized portfolio weights.
+
+        Raises:
+            DataError: For any data mismatch during integrity check.
+            PortfolioError: For any invalid portfolio variable inputs during integrity check.
+
+        !!! example "Example:"
+            ```python
+            # Importing the universal portfolios module
+            from opes.objectives.online import UniversalPortfolios as UP
+
+            # Let this be your ticker data
+            training_data = some_data()
+
+            # Initialize deterministic Cover's universal portfolio
+            deterministic_up = UP(technique='grid', grid_res=5)
+
+            # Initialize stochastic Cover's universal portfolio
+            stochastic_up = UP(technique='sample', n_samples=1000, dirichlet_conc=1.5)
+
+            # Optimize both portfolios
+            det_up_weights = deterministic_up.optimize(data=training_data)
+            stoch_up_weights = stochastic_up.optimize(data=training_data, seed=46)
+            ```
+        """
+        # Preparing asset returns
+        asset_returns = self._prepare_inputs(data)
+
+        # Obtaining portfolios, either by sample or by grid
+        # Note: 'else' is used since the attribute is checked whether its 'sample' or 'grid' in the _prepare_inputs() method
+        if self.technique == "sample":
+            portfolios = self._return_sample_portfolios(rng_value=seed)
+        else:
+            portfolios = self._return_grid_portfolios()
+
+        # Computing portfolio returns, wealths and wealth weighted portfolio
+        portfolio_returns = asset_returns @ portfolios.T
+        portfolio_wealths = np.prod(1 + portfolio_returns, axis=0)
+        wealth_weighted_portfolio = portfolio_wealths @ portfolios
+
+        # Normalization and finding optimal weights
+        self.weights = wealth_weighted_portfolio / portfolio_wealths.sum()
+        return self.weights
 
 
 class BCRP(Optimizer):
@@ -184,7 +351,7 @@ class BCRP(Optimizer):
 
 class ExponentialGradient(Optimizer):
     """
-    Exponential Gradient (EG) optimizer for online portfolio selection.
+    Exponential Gradient (EG) optimizer.
 
     The Exponential Gradient algorithm is a foundational online learning algorithm
     that updates portfolio weights using multiplicative updates proportional to exponential returns.

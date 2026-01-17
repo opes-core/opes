@@ -23,7 +23,7 @@ where $R(\\mathbf{w})$ encodes structural preferences over the weights $\\mathbf
 | `entropy`  | $-\\sum_i \\mathbf{w}_i \\log \\mathbf{w}_i$                                          | Encourages diversification by penalizing concentration.                                                                                 |
 | `variance` | $\\ \\text{Var}(\\mathbf{w})$                                                         | Pushes allocations toward uniformity without strictly enforcing equal weights.                                                          |
 | `mpad`     | $\\frac{1}{n^2} \\sum_{i}^n \\sum_{j}^n \\lvert \\mathbf{w}_i - \\mathbf{w}_j\\rvert$ | Measures and penalizes inequality across weights.                                                                                       |
-| `kld`       | $\\ \\text{D}_{\\text{KL}}(\\mathbf{w} \\| \mathbf{u})$                              | Measures Kullback-Leibler divergence from uniform weights.                                                                              |
+| `kld`      | $\\ \\text{D}_{\\text{KL}}(\\mathbf{w} \\| \mathbf{u})$                               | Measures Kullback-Leibler divergence from uniform weights.                                                                              |
 | `jsd`      | $\\ \\text{D}_{\\text{JSD}}(\\mathbf{w} \\| \mathbf{u})$                              | Measures Jensen-Shannon divergence from uniform weights.                                                                                |
 
 !!! note "Note"
@@ -45,10 +45,13 @@ The following objectives do not support regularization:
 - `Uniform`
 - `InverseVolatility`
 - `SoftmaxMean`
+- `UniversalPortfolios`
 - `ExponentialGradient`
 - `KLRobustMaxMean`
 - `KLRobustKelly`
 - `WassRobustMaxMean`
+- `WassRobustMinVariance`
+- `WassRobustMeanVariance`
 
 ---
 
