@@ -187,9 +187,10 @@ commonly used in finance, including volatility, drawdowns and tail risk metrics.
     - `'omega_0'`: Omega ratio (gain/loss ratio).
     - `'hit_ratio'` : Hit ratio.
 
-!!! note "Notes:"
+!!! note "Notes"
     - The following metrics are scaled to percentages:
         - `'volatility'`
+        - `'growth_rate'`
         - `'mean_return'`
         - `'total_return'`
         - `'mean_drawdown'`
@@ -197,7 +198,7 @@ commonly used in finance, including volatility, drawdowns and tail risk metrics.
         - `'var_95'`
         - `'cvar_95'`
 
-    - The following metrics returned as loss values (usually positive):
+    - The following metrics are returned as loss values (usually positive):
         - `'mean_drawdown'`
         - `'max_drawdown'`
         - `'ulcer_index'`

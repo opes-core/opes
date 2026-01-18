@@ -351,9 +351,10 @@ class Backtester:
             - `'omega_0'`: Omega ratio (gain/loss ratio).
             - `'hit_ratio'` : Hit ratio.
 
-        !!! note "Notes:"
+        !!! note "Notes"
             - The following metrics are scaled to percentages:
                 - `'volatility'`
+                - `'growth_rate'`
                 - `'mean_return'`
                 - `'total_return'`
                 - `'mean_drawdown'`
@@ -361,7 +362,7 @@ class Backtester:
                 - `'var_95'`
                 - `'cvar_95'`
 
-            - The following metrics returned as loss values (usually positive):
+            - The following metrics are returned as loss values (usually positive):
                 - `'mean_drawdown'`
                 - `'max_drawdown'`
                 - `'ulcer_index'`
@@ -410,18 +411,17 @@ class Backtester:
         mean_ret = returns.mean()
         var = -np.quantile(returns, 0.05)
         tail_returns = returns[returns <= -var]
+        print(vol, downside_vol)
 
         # Performance metrics
         performance_metrics = {
-            "sharpe": (
-                mean_ret / vol if (vol > 0 and not np.isfinite(vol)) else np.nan
-            ),
+            "sharpe": (mean_ret / vol if (vol > 0 and np.isfinite(vol)) else np.nan),
             "sortino": (
                 mean_ret / downside_vol
-                if (downside_vol > 0 and not np.isfinite(downside_vol))
+                if (downside_vol > 0 and np.isfinite(downside_vol))
                 else np.nan
             ),
-            "volatility": vol * 100 if (vol > 0 and not np.isfinite(vol)) else np.nan,
+            "volatility": vol * 100 if (vol > 0 and np.isfinite(vol)) else np.nan,
             "growth_rate": (np.prod(1 + returns) ** (1 / len(returns)) - 1) * 100,
             "mean_return": mean_ret * 100,
             "total_return": (np.prod(1 + returns) - 1) * 100,
