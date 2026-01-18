@@ -168,37 +168,37 @@ def validate_metrics_output(metrics):
     # Logical / domain checks
     if metrics["volatility"] < 0:
         issues["volatility_domain"] = (
-            f"Volatility cannot be negative. Got {metrics["volatility"]}"
+            f"Volatility cannot be negative. Got {metrics['volatility']}"
         )
 
     if metrics["max_drawdown"] < 0:
         issues["max_drawdown_domain"] = (
-            f"Max drawdown (loss) should be >= 0. Got {metrics["max_drawdown"]}"
+            f"Max drawdown (loss) should be >= 0. Got {metrics['max_drawdown']}"
         )
 
     if metrics["mean_drawdown"] < 0:
         issues["mean_drawdown_domain"] = (
-            f"Mean drawdown (loss) should be >= 0. Got {metrics["mean_drawdown"]}"
+            f"Mean drawdown (loss) should be >= 0. Got {metrics['mean_drawdown']}"
         )
 
     if metrics["ulcer_index"] < 0:
         issues["ulcer_index_domain"] = (
-            f"Ulcer index cannot be negative. Got {metrics["ulcer_index"]}"
+            f"Ulcer index cannot be negative. Got {metrics['ulcer_index']}"
         )
 
     if metrics["cvar_95"] < metrics["var_95"]:
         issues["cvar_logic"] = (
-            f"CVaR should be >= VaR (greater loss). Got {metrics["cvar_95"]}"
+            f"CVaR should be >= VaR (greater loss). Got {metrics['cvar_95']}"
         )
 
     if metrics["omega_0"] < 0:
         issues["omega_domain"] = (
-            f"Omega ratio cannot be negative. Got {metrics["omega_0"]}"
+            f"Omega ratio cannot be negative. Got {metrics['omega_0']}"
         )
 
     if metrics["hit_ratio"] < 0:
         issues["hit_domain"] = (
-            f"Hit ratio cannot be negative. Got {metrics["hit_ratio"]}"
+            f"Hit ratio cannot be negative. Got {metrics['hit_ratio']}"
         )
 
     # Checking validity
