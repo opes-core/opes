@@ -152,8 +152,6 @@ is considered to be original and kept.
       print(f"{key}: {kelly_backtest}")
     ```
 
----
-
 #### `get_metrics`
 
 ```python
@@ -163,7 +161,7 @@ def get_metrics(returns)
 Computes a comprehensive set of portfolio performance metrics from returns.
 
 This method calculates risk-adjusted and absolute performance measures
-commonly used in finance, including volatility, drawdowns, and tail risk metrics.
+commonly used in finance, including volatility, drawdowns and tail risk metrics.
 
 **Args**
 
@@ -176,20 +174,37 @@ commonly used in finance, including volatility, drawdowns, and tail risk metrics
     - `'sharpe'`: Sharpe ratio.
     - `'sortino'`: Sortino ratio.
     - `'volatility'`: Standard deviation of returns (%).
+    - `'growth_rate'` : Geometric mean growth of the portfolio (%).
     - `'mean_return'`: Mean return (%).
     - `'total_return'`: Total cumulative return (%).
-    - `'max_drawdown'`: Maximum drawdown.
-    - `'var_95'`: Value at Risk at 95% confidence level.
-    - `'cvar_95'`: Conditional Value at Risk (expected shortfall) at 95%.
+    - `'mean_drawdown'` : Mean drawdown (%).
+    - `'max_drawdown'`: Maximum drawdown (%).
+    - `'ulcer_index'` : Ulcer index.
+    - `'var_95'`: Value at Risk at 95% confidence level (%).
+    - `'cvar_95'`: Conditional Value at Risk (expected shortfall) at 95% (%).
     - `'skew'`: Skewness of returns.
     - `'kurtosis'`: Kurtosis of returns.
     - `'omega_0'`: Omega ratio (gain/loss ratio).
+    - `'hit_ratio'` : Hit ratio.
 
 !!! note "Notes:"
-    - Volatility, mean return, total return, maximum drawdown, VaR and CVaR are scaled to percentages.
-    - VaR, CVaR and maximum drawdown are returned as loss values (usually positive).
-    - Tail risk metrics (VaR, CVaR) are based on the lower 5% of returns.
-    - Returns should be cleaned (NaNs removed) before passing to this method.
+    - The following metrics are scaled to percentages:
+        - `'volatility'`
+        - `'mean_return'`
+        - `'total_return'`
+        - `'mean_drawdown'`
+        - `'max_drawdown'`
+        - `'var_95'`
+        - `'cvar_95'`
+
+    - The following metrics returned as loss values (usually positive):
+        - `'mean_drawdown'`
+        - `'max_drawdown'`
+        - `'ulcer_index'`
+        - `'var_95'`
+        - `'cvar_95'`
+
+    - All metrics are rounded to 5 decimal places.
 
 !!! example "Example:"
     ```python
@@ -217,8 +232,6 @@ commonly used in finance, including volatility, drawdowns, and tail risk metrics
     # Printing sharpe and maximum drawdown
     print(metrics["sharpe"], metrics["max_drawdown"])
     ```
-
----
 
 #### `plot_wealth`
 

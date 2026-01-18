@@ -63,12 +63,16 @@ The information provided by OPES is for educational, research and informational 
 | Portfolio Entropy        | Volatility                   |
 | Herfindahl Index         | Average Return               |
 | Gini Coefficient         | Total Return                 |
-| Absolute Maximum Weight  | Maximum Drawdown             |
+| Absolute Maximum Weight  | Mean Drawdown                |
+|                          | Maximum Drawdown             |
+|                          | Geometric Growth Rate        |
 |                          | Value-at-Risk 95             |
 |                          | Conditional-Value-at-Risk 95 |
 |                          | Skew                         |
 |                          | Kurtosis                     |
 |                          | Omega Ratio                  |
+|                          | Ulcer Index                  |
+|                          | Hit Ratio                    |
 
 ## Other Features
 
@@ -87,7 +91,7 @@ The information provided by OPES is for educational, research and informational 
 
 ## Installation
 
-### Using pip
+### Using `pip`
 
 If you have `pip`, it is very convenient to install `opes`.
 
@@ -114,13 +118,13 @@ pip install -e .
 
 ### Verification
 
-Verify your installation by using `pip`
+Verify your installation by using `pip`.
 
 ```bash
 pip show opes
 ```
 
-You can also verify by using python
+You can also verify by using python.
 
 ```python
 >>> import opes
@@ -131,7 +135,7 @@ You can also verify by using python
 
 ## Getting Started
 
-`opes` is designed to be minimalistic and easy to use and learn for any user. Here is an example script which implements my favorite portfolio, the Kelly Criterion
+`opes` is designed to be minimalistic and easy to use and learn for any user. Here is an example script which implements my favorite portfolio, the Kelly Criterion.
 
 ```python
 # I recommend you use yfinance for testing.
@@ -172,14 +176,14 @@ This showcases the simplicty of the module. However there are far more diverse f
 
 ## Testing
 
-Tests for `opes` are written using the `pytest` module. You can run the tests easily using the following command
+Tests for `opes` are written using the `pytest` module. You can run the tests easily using the following command.
 
 ```bash
-# Navigate to project root
+cd project-root    # Navigate to project root
 pytest
 ```
 
-This will run three scripts, each dedicated to testing the optimizer, regularizer and backtesting engine. Note that the tests are heavy and can take a significant amount of time since it tests each of the available objectives. We test using a year's data for the following tickers
+This will run three scripts, each dedicated to testing the optimizer, regularizer and backtesting engine. Note that the tests are heavy and can take a significant amount of time since it tests each of the available objectives. We test using a year's data for the following tickers.
 
 ```
 GOOG, AAPL, AMZN, MSFT

@@ -228,8 +228,6 @@ class Backtester:
             for key in kelly_backtest:
               print(f"{key}: {kelly_backtest}")
             ```
-
-        ---
         """
         # Running backtester integrity checks
         self._backtest_integrity_check(
@@ -329,7 +327,7 @@ class Backtester:
         Computes a comprehensive set of portfolio performance metrics from returns.
 
         This method calculates risk-adjusted and absolute performance measures
-        commonly used in finance, including volatility, drawdowns, and tail risk metrics.
+        commonly used in finance, including volatility, drawdowns and tail risk metrics.
 
         Args:
             returns (*array-like*): Array or list of periodic portfolio returns. Will be converted to numpy array.
@@ -340,20 +338,37 @@ class Backtester:
             - `'sharpe'`: Sharpe ratio.
             - `'sortino'`: Sortino ratio.
             - `'volatility'`: Standard deviation of returns (%).
+            - `'growth_rate'` : Geometric mean growth of the portfolio (%).
             - `'mean_return'`: Mean return (%).
             - `'total_return'`: Total cumulative return (%).
-            - `'max_drawdown'`: Maximum drawdown.
-            - `'var_95'`: Value at Risk at 95% confidence level.
-            - `'cvar_95'`: Conditional Value at Risk (expected shortfall) at 95%.
+            - `'mean_drawdown'` : Mean drawdown (%).
+            - `'max_drawdown'`: Maximum drawdown (%).
+            - `'ulcer_index'` : Ulcer index.
+            - `'var_95'`: Value at Risk at 95% confidence level (%).
+            - `'cvar_95'`: Conditional Value at Risk (expected shortfall) at 95% (%).
             - `'skew'`: Skewness of returns.
             - `'kurtosis'`: Kurtosis of returns.
             - `'omega_0'`: Omega ratio (gain/loss ratio).
+            - `'hit_ratio'` : Hit ratio.
 
         !!! note "Notes:"
-            - Volatility, mean return, total return, maximum drawdown, VaR and CVaR are scaled to percentages.
-            - VaR, CVaR and maximum drawdown are returned as loss values (usually positive).
-            - Tail risk metrics (VaR, CVaR) are based on the lower 5% of returns.
-            - Returns should be cleaned (NaNs removed) before passing to this method.
+            - The following metrics are scaled to percentages:
+                - `'volatility'`
+                - `'mean_return'`
+                - `'total_return'`
+                - `'mean_drawdown'`
+                - `'max_drawdown'`
+                - `'var_95'`
+                - `'cvar_95'`
+
+            - The following metrics returned as loss values (usually positive):
+                - `'mean_drawdown'`
+                - `'max_drawdown'`
+                - `'ulcer_index'`
+                - `'var_95'`
+                - `'cvar_95'`
+
+            - All metrics are rounded to 5 decimal places.
 
         !!! example "Example:"
             ```python
@@ -381,55 +396,51 @@ class Backtester:
             # Printing sharpe and maximum drawdown
             print(metrics["sharpe"], metrics["max_drawdown"])
             ```
-
-        ---
         """
-        # Caching repeated values
+        # Converting returns to numpy array and cleaning
         returns = np.array(returns)
+        returns = returns[np.isfinite(returns)]
+
+        # Caching repeated values
         downside_vol = returns[returns < 0].std()
         vol = returns.std()
+        drawdowns = 1 - np.cumprod(1 + returns) / np.maximum.accumulate(
+            np.cumprod(1 + returns)
+        )
+        mean_ret = returns.mean()
+        var = -np.quantile(returns, 0.05)
+        tail_returns = returns[returns <= -var]
 
         # Performance metrics
-        AVERAGE = returns.mean()
-        SHARPE = AVERAGE / vol if (vol > 0 and not np.isnan(vol)) else np.nan
-        SORTINO = (
-            AVERAGE / downside_vol
-            if (downside_vol > 0 and not np.isnan(downside_vol))
-            else np.nan
-        )
-        VOLATILITY = vol if (vol > 0 or not np.isnan(vol)) else np.nan
-        TOTAL = np.prod(1 + returns) - 1
-        MAX_DD = np.max(
-            1 - np.cumprod(1 + returns) / np.maximum.accumulate(np.cumprod(1 + returns))
-        )
-        VAR = -np.quantile(returns, 0.05)
-        tail_returns = returns[returns <= -VAR]
-        CVAR = -tail_returns.mean() if len(tail_returns) > 0 else np.nan
-        SKEW = scistats.skew(returns)
-        KURTOSIS = scistats.kurtosis(returns)
-        OMEGA = np.sum(np.maximum(returns, 0)) / np.sum(np.maximum(-returns, 0))
+        performance_metrics = {
+            "sharpe": (
+                mean_ret / vol if (vol > 0 and not np.isfinite(vol)) else np.nan
+            ),
+            "sortino": (
+                mean_ret / downside_vol
+                if (downside_vol > 0 and not np.isfinite(downside_vol))
+                else np.nan
+            ),
+            "volatility": vol * 100 if (vol > 0 and not np.isfinite(vol)) else np.nan,
+            "growth_rate": (np.prod(1 + returns) ** (1 / len(returns)) - 1) * 100,
+            "mean_return": mean_ret * 100,
+            "total_return": (np.prod(1 + returns) - 1) * 100,
+            "max_drawdown": (np.max(drawdowns)) * 100,
+            "mean_drawdown": (np.mean(drawdowns)) * 100,
+            "ulcer_index": np.sqrt(np.mean(drawdowns**2)),
+            "var_95": var * 100,
+            "cvar_95": -tail_returns.mean() * 100 if len(tail_returns) > 0 else np.nan,
+            "skew": scistats.skew(returns),
+            "kurtosis": scistats.kurtosis(returns),
+            "omega_0": np.sum(np.maximum(returns, 0)) / np.sum(np.maximum(-returns, 0)),
+            "hit_ratio": np.mean(returns > 0),
+        }
 
-        # Zipping Text and values
-        performance_metrics = [
-            "sharpe",
-            "sortino",
-            "volatility",
-            "mean_return",
-            "total_return",
-            "max_drawdown",
-            "var_95",
-            "cvar_95",
-            "skew",
-            "kurtosis",
-            "omega_0",
-        ]
-        values = [VOLATILITY, AVERAGE, TOTAL, MAX_DD, VAR, CVAR]
-        results = (
-            [round(SHARPE, 5), round(SORTINO, 5)]
-            + [round(x * 100, 5) for x in values]
-            + [round(SKEW, 5), round(KURTOSIS, 5), round(OMEGA, 5)]
-        )
-        return dict(zip(performance_metrics, results))
+        # Rounding values to 5 decimal places
+        for key in performance_metrics:
+            performance_metrics[key] = round(performance_metrics[key], 5)
+
+        return performance_metrics
 
     def plot_wealth(self, returns_dict, initial_wealth=1.0, savefig=False):
         """

@@ -112,7 +112,7 @@ class UniversalPortfolios(Optimizer):
 
     def optimize(self, data=None, seed=100, **kwargs):
         """
-        Finds the Cover's Universal Portfolio:
+        Computes the Cover's Universal Portfolio:
 
         $$
         \\mathbf{w}_{\\text{cover}} = \\frac{ \\int_\\Delta \\mathbf{w} \\cdot W_T(\\mathbf{w}) \\ d\\mathbf{w}} {\\int_\\Delta W_T(\\mathbf{w}) \\ d\\mathbf{w}} \\approx \\frac{ \\sum_{\\mathbf{w} \\in \\mathcal P} \\mathbf{w} \\cdot W_T(\\mathbf{w})} {\\sum_{\\mathbf{w} \\in \\mathcal P} W_T(\\mathbf{w})}

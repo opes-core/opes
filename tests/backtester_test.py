@@ -5,6 +5,7 @@ import pkgutil
 import importlib
 import inspect
 import pytest
+from numbers import Real
 from pathlib import Path
 
 import numpy as np
@@ -132,14 +133,18 @@ def validate_metrics_output(metrics):
         "sharpe",
         "sortino",
         "volatility",
+        "growth_rate",
         "mean_return",
         "total_return",
         "max_drawdown",
+        "mean_drawdown",
+        "ulcer_index",
         "var_95",
         "cvar_95",
         "skew",
         "kurtosis",
         "omega_0",
+        "hit_ratio",
     }
 
     # Check key presence
@@ -156,26 +161,47 @@ def validate_metrics_output(metrics):
 
     # Check value types and finiteness
     for k, v in metrics.items():
-        if not isinstance(v, (int, float, np.floating)):
+        if not isinstance(v, Real):
             issues[f"{k}_type"] = f"Expected scalar numeric, got {type(v)}"
             continue
 
-        if np.isnan(v) or np.isinf(v):
-            issues[f"{k}_value"] = "Contains NaN or Inf"
-
     # Logical / domain checks
     if metrics["volatility"] < 0:
-        issues["volatility_domain"] = "Volatility cannot be negative"
+        issues["volatility_domain"] = (
+            f"Volatility cannot be negative. Got {metrics["volatility"]}"
+        )
 
     if metrics["max_drawdown"] < 0:
-        issues["max_drawdown_domain"] = "Max drawdown (loss) should be >= 0"
+        issues["max_drawdown_domain"] = (
+            f"Max drawdown (loss) should be >= 0. Got {metrics["max_drawdown"]}"
+        )
+
+    if metrics["mean_drawdown"] < 0:
+        issues["mean_drawdown_domain"] = (
+            f"Mean drawdown (loss) should be >= 0. Got {metrics["mean_drawdown"]}"
+        )
+
+    if metrics["ulcer_index"] < 0:
+        issues["ulcer_index_domain"] = (
+            f"Ulcer index cannot be negative. Got {metrics["ulcer_index"]}"
+        )
 
     if metrics["cvar_95"] < metrics["var_95"]:
-        issues["cvar_logic"] = "CVaR should be >= VaR (greater loss)"
+        issues["cvar_logic"] = (
+            f"CVaR should be >= VaR (greater loss). Got {metrics["cvar_95"]}"
+        )
 
     if metrics["omega_0"] < 0:
-        issues["omega_domain"] = "Omega ratio cannot be negative"
+        issues["omega_domain"] = (
+            f"Omega ratio cannot be negative. Got {metrics["omega_0"]}"
+        )
 
+    if metrics["hit_ratio"] < 0:
+        issues["hit_domain"] = (
+            f"Hit ratio cannot be negative. Got {metrics["hit_ratio"]}"
+        )
+
+    # Checking validity
     valid = len(issues) == 0
     return valid, issues
 
