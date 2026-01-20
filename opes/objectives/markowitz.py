@@ -17,7 +17,7 @@ from scipy.optimize import minimize, differential_evolution
 from opes.objectives.base_optimizer import Optimizer
 from ..regularizer import _find_regularizer
 from ..utils import extract_trim, test_integrity, find_constraint
-from ..errors import OptimizationError, PortfolioError
+from ..errors import OptimizationError
 
 
 class MaxMean(Optimizer):

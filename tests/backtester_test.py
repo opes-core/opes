@@ -69,7 +69,7 @@ def validate_backtest_results(results):
     issues = {}
 
     # Check keys
-    required_keys = ["returns", "weights", "costs"]
+    required_keys = ["returns", "weights", "costs", "timeline"]
     for key in required_keys:
         if key not in results:
             issues[key] = "Missing key in results dictionary."
@@ -80,6 +80,7 @@ def validate_backtest_results(results):
     returns = results["returns"]
     weights = results["weights"]
     costs = results["costs"]
+    timeline = results["timeline"]
 
     # Check return existence
     if len(returns) == 0:
@@ -92,6 +93,8 @@ def validate_backtest_results(results):
         issues["weights"] = f"Expected np.ndarray, got {type(weights)}"
     if not isinstance(costs, np.ndarray):
         issues["costs"] = f"Expected np.ndarray, got {type(costs)}"
+    if not isinstance(timeline, np.ndarray):
+        issues["timeline"] = f"Expected np.ndarray, got {type(timeline)}"
 
     # Check shapes
     n_steps = len(returns)
@@ -102,6 +105,10 @@ def validate_backtest_results(results):
     if costs.shape[0] != n_steps:
         issues["costs_shape"] = (
             f"Costs length ({costs.shape[0]}) must match returns length ({n_steps})"
+        )
+    if timeline.shape[0] != n_steps:
+        issues["timeline_shape"] = (
+            f"Timeline length ({timeline.shape[0]}) must match returns length ({n_steps})"
         )
 
     # Check values
