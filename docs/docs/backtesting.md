@@ -309,7 +309,7 @@ and optional saving of the plot to a file.
             "Maximum Mean (L2, 1e-3)": scenario_1['returns'],
             "Mean Variance (RA=1.5)": scenario_2,
         },
-        timeline=scenario_1['dates']
+        timeline=scenario_1['timeline']
     )
     ```
 
