@@ -23,7 +23,7 @@ OPES is a research-oriented and experimentation-focused Python module for portfo
 !!! example "Demo"
     ```python
     # Demonstration of portfolio optimization using the Kelly Criterion
-    # 'data' represents OHLCV market data grouped by ticker symbols
+    # `return_data` represents OHLCV market data grouped by ticker symbols
     
     from opes.objectives import Kelly
     
@@ -31,7 +31,7 @@ OPES is a research-oriented and experimentation-focused Python module for portfo
     kelly_portfolio = Kelly(fraction=0.8, reg="l2", strength=0.01)
     
     # Compute portfolio weights with custom bounds and clean negligible allocations
-    kelly_portfolio.optimize(data, weight_bounds=(0.05, 0.8))
+    kelly_portfolio.optimize(return_data, weight_bounds=(0.05, 0.8))
     cleaned_weights = kelly_portfolio.clean_weights(threshold=1e-6)
     
     # Output the final portfolio weights
