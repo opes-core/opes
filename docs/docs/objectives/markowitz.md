@@ -133,7 +133,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the maximum mean module
-    from opes.objectives.markowitz import MaxMean
+    from opes.objectives import MaxMean
 
     # Let this be your ticker data
     training_data = some_data()
@@ -170,7 +170,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the MaxMean class
-    from opes.objectives.markowitz import MaxMean
+    from opes.objectives import MaxMean
 
     # Set with 'entropy' regularization
     optimizer = MaxMean(reg='entropy', strength=0.01)
@@ -346,7 +346,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the maximum sharpe module
-    from opes.objectives.markowitz import MaxSharpe
+    from opes.objectives import MaxSharpe
 
     # Let this be your ticker data
     training_data = some_data()
@@ -384,7 +384,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the MaxSharpe class
-    from opes.objectives.markowitz import MaxSharpe
+    from opes.objectives import MaxSharpe
 
     # Set with 'entropy' regularization
     optimizer = MaxSharpe(reg='entropy', strength=0.01)
@@ -552,7 +552,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the mean variance module
-    from opes.objectives.markowitz import MeanVariance
+    from opes.objectives import MeanVariance
 
     # Let this be your ticker data
     training_data = some_data()
@@ -589,7 +589,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the MeanVariance class
-    from opes.objectives.markowitz import MeanVariance
+    from opes.objectives import MeanVariance
 
     # Set with 'entropy' regularization
     optimizer = MeanVariance(reg='entropy', strength=0.01)
@@ -759,7 +759,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the Global Minimum Variance (GMV) module
-    from opes.objectives.markowitz import MinVariance
+    from opes.objectives import MinVariance
 
     # Let this be your ticker data
     training_data = some_data()
@@ -796,7 +796,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the MinVariance class
-    from opes.objectives.markowitz import MinVariance
+    from opes.objectives import MinVariance
 
     # Set with 'entropy' regularization
     optimizer = MinVariance(reg='entropy', strength=0.01)

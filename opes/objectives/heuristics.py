@@ -16,6 +16,8 @@ from numbers import Integral as Integer
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize, differential_evolution
+from scipy.cluster.hierarchy import linkage, dendrogram
+from scipy.spatial.distance import squareform
 
 from opes.objectives.base_optimizer import Optimizer
 from ..utils import extract_trim, test_integrity, find_constraint
@@ -104,7 +106,7 @@ class Uniform(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the equal-weight module
-            from opes.objectives.heuristics import Uniform
+            from opes.objectives import Uniform
 
             # Let this be your ticker data
             training_data = some_data()
@@ -123,7 +125,7 @@ class Uniform(Optimizer):
 
         # Assigning weights and returning the same
         self.weights = np.array(np.ones(len(self.tickers)) / len(self.tickers))
-        return self.weights
+        return self.weights.copy()
 
 
 class InverseVolatility(Optimizer):
@@ -203,7 +205,7 @@ class InverseVolatility(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the Inverse Volatility Portfolio (IVP) module
-            from opes.objectives.heuristics import InverseVolatility as IVP
+            from opes.objectives import InverseVolatility as IVP
 
             # Let this be your ticker data
             training_data = some_data()
@@ -218,7 +220,7 @@ class InverseVolatility(Optimizer):
         # Preparing inputs for finding weights
         self._prepare_inputs(data)
         self.weights = (1 / self.volarray) / (1 / self.volarray).sum()
-        return self.weights
+        return self.weights.copy()
 
 
 class SoftmaxMean(Optimizer):
@@ -306,7 +308,7 @@ class SoftmaxMean(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the softmax mean module
-            from opes.objectives.heuristics import SoftmaxMean
+            from opes.objectives import SoftmaxMean
 
             # Let this be your ticker data
             training_data = some_data()
@@ -330,7 +332,7 @@ class SoftmaxMean(Optimizer):
             self.mean / self.temperature - np.max(self.mean / self.temperature)
         )
         self.weights /= self.weights.sum()
-        return self.weights
+        return self.weights.copy()
 
 
 class MaxDiversification(Optimizer):
@@ -443,7 +445,7 @@ class MaxDiversification(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the maximum diversification module
-            from opes.objectives.heuristics import MaxDiversification
+            from opes.objectives import MaxDiversification
 
             # Let this be your ticker data
             training_data = some_data()
@@ -476,7 +478,7 @@ class MaxDiversification(Optimizer):
         )
         if result.success:
             self.weights = result.x / (result.x.sum() + 1e-12)
-            return self.weights
+            return self.weights.copy()
         else:
             raise OptimizationError(
                 f"Maximum diversification optimization failed: {result.message}"
@@ -497,7 +499,7 @@ class MaxDiversification(Optimizer):
         !!! example "Example:"
             ```python
             # Import the MaxDiversification class
-            from opes.objectives.heuristics import MaxDiversification
+            from opes.objectives import MaxDiversification
 
             # Set with 'entropy' regularization
             optimizer = MaxDiversification(reg='entropy', strength=0.01)
@@ -617,7 +619,7 @@ class RiskParity(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the risk parity module
-            from opes.objectives.heuristics import RiskParity
+            from opes.objectives import RiskParity
 
             # Let this be your ticker data
             training_data = some_data()
@@ -655,7 +657,7 @@ class RiskParity(Optimizer):
         )
         if result.success:
             self.weights = result.x
-            return self.weights
+            return self.weights.copy()
         else:
             raise OptimizationError(
                 f"Risk parity optimization failed: {result.message}"
@@ -676,7 +678,7 @@ class RiskParity(Optimizer):
         !!! example "Example:"
             ```python
             # Import the RiskParity class
-            from opes.objectives.heuristics import RiskParity
+            from opes.objectives import RiskParity
 
             # Set with 'entropy' regularization
             optimizer = RiskParity(reg='entropy', strength=0.01)
@@ -796,12 +798,12 @@ class REPO(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the REPO module
-            from opes.objectives.heuristics import REPO
+            from opes.objectives import REPO
 
             # Let this be your ticker data
             training_data = some_data()
 
-            # Let these be your custom mean vector
+            # Let this be your custom mean vector
             mean_v = customMean()
 
             # Initialize with custom regularization
@@ -841,7 +843,7 @@ class REPO(Optimizer):
         )
         if result.success:
             self.weights = result.x / (result.x.sum() + 1e-12)
-            return self.weights
+            return self.weights.copy()
         else:
             raise OptimizationError(f"REPO optimization failed: {result.message}")
 
@@ -860,7 +862,7 @@ class REPO(Optimizer):
         !!! example "Example:"
             ```python
             # Import the REPO class
-            from opes.objectives.heuristics import REPO
+            from opes.objectives import REPO
 
             # Set with 'entropy' regularization
             optimizer = REPO(reg='entropy', strength=0.01)
@@ -877,3 +879,200 @@ class REPO(Optimizer):
         """
         self.reg = _find_regularizer(reg)
         self.strength = strength
+
+
+class HierarchicalRiskParity(Optimizer):
+    """
+    Hierarchical Risk Parity (HRP) optimization.
+
+    Hierarchical Risk Parity (HRP), introduced by López de Prado,
+    is a portfolio construction methodology that allocates capital
+    through hierarchical clustering and recursive risk balancing
+    rather than direct optimization of a scalar objective. HRP
+    addresses several structural weaknesses of traditional
+    mean-variance and risk parity approaches, including sensitivity
+    to covariance matrix estimation error, numerical instability
+    arising from matrix inversion and over-concentration in highly
+    correlated assets. By organizing assets into a hierarchy based
+    on correlation structure and allocating weights inversely to
+    cluster-level variance, HRP achieves diversification across
+    both individual assets and correlated groups. This procedure
+    yields stable, fully invested portfolios that are robust
+    out-of-sample and well-suited for high-dimensional or noisy
+    return environments, particularly when covariance estimates are
+    ill-conditioned.
+    """
+
+    def __init__(self, cluster_method="average"):
+        """
+        **Args:**
+
+        - `cluster_method` (*str, optional*): Clustering method to be used for hierarchical clustering. Defaults to `'average'`. Available methods are:
+            - '`average`': Merges clusters based on the minimum pairwise distance, often producing elongated, chain-like clusters.
+            - '`single'`: Merges clusters based on the maximum pairwise distance, favoring compact and tightly bound clusters.
+            - `'complete'`: Merges clusters using the average pairwise distance between all points in each cluster, providing a balanced compromise between single and complete linkage.
+            - '`ward`': Merges clusters to minimize the increase in within-cluster variance, producing balanced clusters aligned with variance-based portfolio construction.
+        """
+        self.cluster_method = cluster_method.lower()
+        self.covariance = None
+        self.correlation = None
+
+        self.weights = None
+        self.tickers = None
+
+    # Helper method to prepare inputs for optimization
+    # Also validates parameters and checks for data inconsistency
+    def _prepare_optimization_inputs(self, data, custom_cov):
+
+        # Checking for cluster method validity
+        if self.cluster_method not in ["single", "average", "complete", "ward"]:
+            raise PortfolioError(f"Unknown cluster_method: {self.cluster_method}")
+
+        # Obtaining return and ticker data
+        self.tickers, data = extract_trim(data)
+
+        # Computing correlation matrix
+        self.correlation = np.corrcoef(data, rowvar=False)
+
+        # Checking for covariance and weights and assigning optimization data accordingly
+        if custom_cov is None:
+            # Invertibility need not be handled as usual since HRP does not invert covariance
+            self.covariance = np.cov(data, rowvar=False)
+        else:
+            self.covariance = custom_cov
+        # We start with all assets set to 1
+        # This is different from the usual equal weight since HRP allocates step by step
+        # But is initialized as 1 before allocation
+        self.weights = np.ones(len(self.tickers))
+
+        # Functions to test data integrity and find optimization constraint
+        test_integrity(tickers=self.tickers, weights=self.weights, cov=self.covariance)
+
+    # Function to get leaf order of dendogram
+    def _get_leaf_order(self, condensed_distance_matrix):
+        clustered_linkage = linkage(
+            condensed_distance_matrix, method=self.cluster_method
+        )
+        cluster_dendogram = dendrogram(clustered_linkage, no_plot=True)
+        return np.array(cluster_dendogram["leaves"])
+
+    # Function to get cluster variance
+    def _get_cluster_variance(self, cluster):
+        # Slicing covariance which is required for the cluster
+        cov_slice = self.covariance[np.ix_(cluster, cluster)]
+
+        # Finding variance (diagonal elements)
+        diag = np.diag(cov_slice)
+
+        # Computing cluster variance
+        # NOTE: 1e-12 added for numerical stability
+        inv_diag = 1.0 / (diag + 1e-12)
+        return 1.0 / inv_diag.sum()
+
+    # 'Recursive' bisection function
+    # NOTE: while loop + queue is used for stability
+    def _recursive_bisection(self, leaf_order):
+        clusters = [leaf_order]
+
+        # Instead of recursion, which might hit a stack limit in python, we use a while loop and a queue
+        # Not a queue exactly, but we similate one using pop(0) and append()
+        while clusters:
+            cluster = clusters.pop(0)
+
+            # Checking if cluster is a single element or none
+            if len(cluster) <= 1:
+                continue
+
+            # Splitting clusters into left and right subsections
+            split_var = len(cluster) // 2
+            left_cluster = cluster[:split_var]
+            right_cluster = cluster[split_var:]
+
+            # Obtaining cluster variance for left and right
+            left_variance = self._get_cluster_variance(left_cluster)
+            right_variance = self._get_cluster_variance(right_cluster)
+
+            # Computing left weights (alpha)
+            alpha = 1 - left_variance / (left_variance + right_variance)
+
+            # Assigning weights to left and right clusters respectively
+            self.weights[left_cluster] *= alpha
+            self.weights[right_cluster] *= 1 - alpha
+
+            # Appending for recursion
+            clusters.append(left_cluster)
+            clusters.append(right_cluster)
+
+        self.weights = self.weights / self.weights.sum()
+
+    def optimize(self, data, custom_cov=None):
+        """
+        Computes the Hierarchical Risk Parity portfolio:
+
+        $$
+        \\mathbf{w}_i \\propto \\frac{1}{\\sigma^2_{\\text{cluster}}}
+        $$
+
+        !!! note "Note"
+            Asset weight bounds are defaulted to (0,1).
+
+        Args:
+            data (*pd.DataFrame*): Ticker price data in either multi-index or single-index formats. Examples are given below:
+                ```
+                # Single-Index Example
+                Ticker           TSLA      NVDA       GME        PFE       AAPL  ...
+                Date
+                2015-01-02  14.620667  0.483011  6.288958  18.688917  24.237551  ...
+                2015-01-05  14.006000  0.474853  6.460137  18.587513  23.554741  ...
+                2015-01-06  14.085333  0.460456  6.268492  18.742599  23.556952  ...
+                2015-01-07  14.063333  0.459257  6.195926  18.999102  23.887287  ...
+                2015-01-08  14.041333  0.476533  6.268492  19.386841  24.805082  ...
+                ...
+
+                # Multi-Index Example Structure (OHLCV)
+                Columns:
+                + Ticker (e.g. GME, PFE, AAPL, ...)
+                - Open
+                - High
+                - Low
+                - Close
+                - Volume
+                ```
+            `custom_cov` (*None or array-like of shape (n_assets, n_assets), optional*): Custom covariance matrix. Can be used to inject externally generated covariance matrices (eg. Ledoit-Wolf). Defaults to `None`.
+
+        **Returns:**
+
+        - `np.ndarray`: Vector of optimized portfolio weights.
+
+        Raises:
+            DataError: For any data mismatch during integrity check.
+            PortfolioError: For any invalid portfolio variable inputs during integrity check.
+
+        !!! example "Example:"
+            ```python
+            # Importing the HRP module
+            from opes.objectives import HierarchicalRiskParity as HRP
+
+            # Let this be your ticker data
+            training_data = some_data()
+
+            # Let this be your custom covariance matrix
+            cov_m = covMatrix()
+
+            # Initialize with custom clustering method
+            hrp_portfolio = HRP(cluster_method='ward')
+
+            # Optimize portfolio with custom covariance matrix
+            weights = hrp_portfolio.optimize(data=training_data, custom_cov=cov_m)
+            ```
+        """
+        # Preparing inputs for HRP optimization
+        self._prepare_optimization_inputs(data, custom_cov=custom_cov)
+
+        # Computing distance matrix and condensing it for leaf order
+        distance_matrix = np.sqrt(0.5 * (1 - self.correlation))
+        condensed_distance = squareform(distance_matrix, checks=False)
+        leaf_order = self._get_leaf_order(condensed_distance)
+
+        self._recursive_bisection(leaf_order)
+        return self.weights.copy()

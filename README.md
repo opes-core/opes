@@ -33,6 +33,7 @@ The information provided by OPES is for educational, research and informational 
 |                                          | Maximum Sharpe Ratio                               |
 | **Principled Heuristics**                | Uniform (1/N)                                      |
 |                                          | Risk Parity                                        |
+|                                          | Hierarchical Risk Parity                           |
 |                                          | Inverse Volatility                                 |
 |                                          | Softmax Mean                                       |
 |                                          | Maximum Diversification                            |
@@ -201,7 +202,6 @@ Also it eats up RAM like pac-man.
 These features are still in the works and may or may not appear in later updates:
 
 | **Objective Name (Category)**                    |
-| ------------------------------------------------ |
-| Hierarchical Risk Parity (Principled Heuristics) |              
+| ------------------------------------------------ |             
 | Online Newton Step (Online Learning)             | 
 | ADA-BARRONS (Online Learning)                    |

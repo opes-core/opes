@@ -109,7 +109,7 @@ class Kelly(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the kelly criterion module
-            from opes.objectives.utility_theory import Kelly
+            from opes.objectives import Kelly
 
             # Let this be your ticker data
             training_data = some_data()
@@ -140,7 +140,7 @@ class Kelly(Optimizer):
         )
         if result.success:
             self.weights = result.x
-            return self.weights
+            return self.weights.copy()
         else:
             raise OptimizationError(
                 f"Kelly criterion optimization failed: {result.message}"
@@ -161,7 +161,7 @@ class Kelly(Optimizer):
         !!! example "Example:"
             ```python
             # Import the Kelly Criterion class
-            from opes.objectives.utility_theory import Kelly
+            from opes.objectives import Kelly
 
             # Set with 'entropy' regularization
             optimizer = Kelly(reg='entropy', strength=0.01)
@@ -262,7 +262,7 @@ class QuadraticUtility(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the Quadratic Utility class
-            from opes.objectives.utility_theory import QuadraticUtility as QU
+            from opes.objectives import QuadraticUtility as QU
 
             # Let this be your ticker data
             training_data = some_data()
@@ -295,7 +295,7 @@ class QuadraticUtility(Optimizer):
         )
         if result.success:
             self.weights = result.x
-            return self.weights
+            return self.weights.copy()
         else:
             raise OptimizationError(
                 f"Quadratic utility optimization failed: {result.message}"
@@ -316,7 +316,7 @@ class QuadraticUtility(Optimizer):
         !!! example "Example:"
             ```python
             # Import the Quadratic Utility class
-            from opes.objectives.utility_theory import QuadraticUtility
+            from opes.objectives import QuadraticUtility
 
             # Set with 'entropy' regularization
             optimizer = QuadraticUtility(reg='entropy', strength=0.01)
@@ -425,7 +425,7 @@ class CARA(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the CARA class
-            from opes.objectives.utility_theory import CARA
+            from opes.objectives import CARA
 
             # Let this be your ticker data
             training_data = some_data()
@@ -458,7 +458,7 @@ class CARA(Optimizer):
         )
         if result.success:
             self.weights = result.x
-            return self.weights
+            return self.weights.copy()
         else:
             raise OptimizationError(f"CARA optimization failed: {result.message}")
 
@@ -477,7 +477,7 @@ class CARA(Optimizer):
         !!! example "Example:"
             ```python
             # Import the CARA class
-            from opes.objectives.utility_theory import CARA
+            from opes.objectives import CARA
 
             # Set with 'entropy' regularization
             optimizer = CARA(reg='entropy', strength=0.01)
@@ -585,7 +585,7 @@ class CRRA(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the CRRA class
-            from opes.objectives.utility_theory import CRRA
+            from opes.objectives import CRRA
 
             # Let this be your ticker data
             training_data = some_data()
@@ -618,7 +618,7 @@ class CRRA(Optimizer):
         )
         if result.success:
             self.weights = result.x
-            return self.weights
+            return self.weights.copy()
         else:
             raise OptimizationError(f"CRRA optimization failed: {result.message}")
 
@@ -637,7 +637,7 @@ class CRRA(Optimizer):
         !!! example "Example:"
             ```python
             # Import the CRRA class
-            from opes.objectives.utility_theory import CRRA
+            from opes.objectives import CRRA
 
             # Set with 'entropy' regularization
             optimizer = CRRA(reg='entropy', strength=0.01)
@@ -759,7 +759,7 @@ class HARA(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the HARA class
-            from opes.objectives.utility_theory import HARA
+            from opes.objectives import HARA
 
             # Let this be your ticker data
             training_data = some_data()
@@ -793,7 +793,7 @@ class HARA(Optimizer):
         )
         if result.success:
             self.weights = result.x
-            return self.weights
+            return self.weights.copy()
         else:
             raise OptimizationError(f"HARA optimization failed: {result.message}")
 
@@ -812,7 +812,7 @@ class HARA(Optimizer):
         !!! example "Example:"
             ```python
             # Import the HARA class
-            from opes.objectives.utility_theory import HARA
+            from opes.objectives import HARA
 
             # Set with 'entropy' regularization
             optimizer = HARA(reg='entropy', strength=0.01)

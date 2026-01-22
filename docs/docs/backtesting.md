@@ -252,8 +252,8 @@ def plot_wealth(
 OPES ships with a basic plotting utility for visualizing portfolio wealth over time.
 
 This method exists for quick inspection and debugging, not for deep performance analysis.
-It visualizes cumulative wealth for one or multiple strategies using their periodic 
-returns. It also provides a breakeven reference line and optional saving of the plot to 
+It visualizes cumulative wealth for one or multiple strategies using their periodic
+returns. It also provides a breakeven reference line and optional saving of the plot to
 a file.
 
 !!! tip "Recommendation:"
