@@ -36,12 +36,12 @@ class Backtester:
         """
         **Args:**
 
-        - `train_data` (*pd.DataFrame*): Historical training data. Defaults to None.
-        - `test_data` (*pd.DataFrame*): Historical testing data. Defaults to None.
+        - `train_data` (*pd.DataFrame*): Historical training data. Defaults to `None`.
+        - `test_data` (*pd.DataFrame*): Historical testing data. Defaults to `None`.
         - `cost` (*dict, optional*): Transaction cost parameters. Defaults to `{'const': 10.0}`. Various cost models are given below:
             - `{'const': constant_bps_value}`: Constant cost value throughout time. Deterministic.
             - `{'gamma': (shape, scale)}`: Gamma distributed cost. Stochastic.
-            - `{'lognormal': (mu, sigma)}`: lognormally distributed cost. Stochastic.
+            - `{'lognormal': (mu, sigma)}`: Lognormally distributed cost. Stochastic.
             - `{'inversegaussian': (mean, shape)}`: Inverse gaussian distributed cost. Stochastic.
             - `{'jump': (arrival_rate, mu, sigma)}`: Poisson-compound lognormally distributed cost. Stochastic.
 
@@ -71,8 +71,6 @@ class Backtester:
             - After cleaning/truncation, close prices are extracted per asset. Returns are computed as:
 
             $$R_t = \\frac{P^{(t)}}{P^{(t-1)}} - 1$$
-
-        ---
         """
         # Assigning by dropping nans to ensure proper indexing
         # Dropping nan rows results makes backtest loops robust and predictable
@@ -489,9 +487,9 @@ class Backtester:
         OPES ships with a basic plotting utility for visualizing portfolio wealth over time.
 
         This method exists for quick inspection and debugging, not for deep performance analysis.
-        It visualizes cumulative wealth for one or multiple strategies
-        using their periodic returns. It also provides a breakeven reference line
-        and optional saving of the plot to a file.
+        It visualizes cumulative wealth for one or multiple strategies using their periodic
+        returns. It also provides a breakeven reference line and optional saving of the plot to
+        a file.
 
         !!! tip "Recommendation:"
             For serious research, reporting, or strategy comparison, we strongly recommend writing your own custom plotting pipeline.
@@ -542,7 +540,7 @@ class Backtester:
                     "Maximum Mean (L2, 1e-3)": scenario_1['returns'],
                     "Mean Variance (RA=1.5)": scenario_2,
                 },
-                timeline=scenario_1['dates']
+                timeline=scenario_1['timeline']
             )
             ```
         """

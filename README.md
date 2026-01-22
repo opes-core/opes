@@ -81,11 +81,12 @@ The information provided by OPES is for educational, research and informational 
 | Constant                   | L1 Regularization                         |
 | Gamma                      | L2 Regularization                         |
 | Lognormal                  | L-infinity Regularization                 |
-| Inverse Gaussian           | Entropy                                   |
+| Inverse Gaussian           | Negative Entropy                          |
 | Compound Poisson-Lognormal | Weight Variance                           |
 |                            | Mean Pairwise Absolute Deviation          |
-|                            | KL-Divergence from Uniform (Experimental) |
-|                            | JS-Divergence from Uniform (Experimental) |
+|                            | Maximum Pairwise Deviation                |
+|                            | JS-Divergence from Uniform Weights        |
+|                            | Wasserstein-1 from Uniform Weights        |
 
 ---
 
@@ -143,7 +144,7 @@ You can also verify by using python.
 import yfinance as yf
 
 # Importing our Kelly class
-from opes.objectives.utility_theory import Kelly
+from opes.objectives import Kelly
 
 # Obtaining ticker data
 # Basic yfinance stuff
