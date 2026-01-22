@@ -13,7 +13,16 @@ prices_path = BASE_DIR / "prices.csv"
 
 # Available regularizers
 # L1 regularizer is checked separately since it is primarily intended for long-short portfolios
-regularizers_available = ["l2", "l-inf", "entropy", "variance", "mpad", "kld", "jsd"]
+regularizers_available = [
+    "l2",
+    "l-inf",
+    "entropy",
+    "variance",
+    "mpad",
+    "mpd",
+    "jsd",
+    "wass-1",
+]
 
 
 # Function to fetch data from predetermined csv files

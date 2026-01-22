@@ -15,24 +15,24 @@ where $R(\\mathbf{w})$ encodes structural preferences over the weights $\\mathbf
 
 ### Regularization Schemes
 
-| Name       | Formulation                                                                           | Use-case                                                                                                                                |
-|------------|---------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
-| `l1`       | $\\sum_i \\lvert \\mathbf{w}_i\\rvert$                                                | Encourages sparse portfolios by driving many weights to zero. Mostly relevant for long-short or unconstrained gross exposure settings.  |
-| `l2`       | $\\sum_i \\mathbf{w}_i^2$                                                             | Produces smooth, stable portfolios and reduces sensitivity to noise.                                                                    |
-| `l-inf`    | $\\max_i \\lvert \\mathbf{w}_i\\rvert$                                                | Penalizes the largest absolute position, enforcing a soft cap on single-asset dominance.                                                |
-| `entropy`  | $-\\sum_i \\mathbf{w}_i \\log \\mathbf{w}_i$                                          | Encourages diversification by penalizing concentration.                                                                                 |
-| `variance` | $\\ \\text{Var}(\\mathbf{w})$                                                         | Pushes allocations toward uniformity without strictly enforcing equal weights.                                                          |
-| `mpad`     | $\\frac{1}{n^2} \\sum_{i}^n \\sum_{j}^n \\lvert \\mathbf{w}_i - \\mathbf{w}_j\\rvert$ | Measures and penalizes inequality across weights.                                                                                       |
-| `kld`      | $\\ \\text{D}_{\\text{KL}}(\\mathbf{w} \\| \\mathbf{u})$                              | Measures Kullback-Leibler divergence from uniform weights.                                                                              |
-| `jsd`      | $\\ \\text{D}_{\\text{JSD}}(\\mathbf{w} \\| \\mathbf{u})$                             | Measures Jensen-Shannon divergence from uniform weights.                                                                                |
+ | Regularization Scheme                           | Identifier | Formulation                                                                           |
+ | ----------------------------------------------- | ---------- | ------------------------------------------------------------------------------------- |
+ | Taxicab Norm                                    | `l1`       | $\\sum_i \\lvert \\mathbf{w}_i\\rvert$                                                |
+ | Euclidean Norm                                  | `l2`       | $\\sum_i \\mathbf{w}_i^2$                                                             |
+ | Chebyshev Norm                                  | `l-inf`    | $\\max_i \\lvert \\mathbf{w}_i\\rvert$                                                |
+ | Negative Entropy of Weights                     | `entropy`  | $\\sum_i \\mathbf{w}_i \\log \\mathbf{w}_i$                                           |
+ | Jensen-Shannon Divergence from Uniform Weights  | `jsd`      | $\\text{D}_{\\text{JSD}}(\\mathbf{w} \\| \\mathbf{u})$                                |
+ | Variance of Weights                             | `variance` | $\\text{Var}(\\mathbf{w})$                                                            |
+ | Mean Pairwise Absolute Deviation                | `mpad`     | $\\frac{1}{n^2} \\sum_{i}^n \\sum_{j}^n \\lvert \\mathbf{w}_i - \\mathbf{w}_j\\rvert$ |
+ | Maximum Pairwise Deviation                      | `mpd`      | $\\max_{i,j} \\lvert \\mathbf{w}_i - \\mathbf{w}_j \\rvert$                           |
+ | Wasserstein-1 Distance from Uniform Weights     | `wass-1`   | $\\text{W}_{1}(\\mathbf{w}, \\mathbf{u})$                                             |
 
-!!! note "Note"
-    For long-short portfolios, mathematically grounded regularizers such as `entropy`, `kld`, and `jsd` first normalize the weights
-    and constrain them to the simplex before applying the regularization, ensuring mathematical coherence is not violated.
-
-!!! note "Temporary Note"
-    Kullback-Leibler regularization and entropy are the exact same, since KL-divergence's prior distribution is uniform weights. However
-    it is included so that it *may* be later updated with custom prior distribution (weights).
+!!! note "Notes"
+    - `l1` regularization is mainly used for long-short portfolios to encourage less extreme
+    allocations to meet the net exposure of 1. Using it on long-only portfolios is redundant.
+    - For long-short portfolios, mathematically grounded regularizers such as `entropy`, `jsd`
+    and `wass-1` first normalize the weights and constrain them to the simplex before applying
+    the regularization, ensuring mathematical coherence is not violated.
 
 ---
 
@@ -59,23 +59,25 @@ The following objectives do not support regularization:
 
 ```python
 
-# Importing a valid optimizer from opes
-from opes.objectives.markowitz import MaxMean
+# Importing an optimizer which supports regularization
+from opes.objectives import MaxMean
 
 # Initializing different portfolios with various regularization schemes
-maxmean_taxi = MaxMean(reg='l1', strength=0.01)
-maxmean_eucl = MaxMean(reg='l2', strength=0.01)
-maxmean_cheby = MaxMean(reg='l-inf', strength=0.01)
-maxmean_entropy = MaxMean(reg='entropy', strength=0.01)
-maxmean_var = MaxMean(reg='variance', strength=0.01)
-maxmean_mpad = MaxMean(reg='mpad', strength=0.01)
-maxmean_mpad = MaxMean(reg='kld', strength=0.01)
-maxmean_mpad = MaxMean(reg='jsd', strength=0.01)
+maxmean_taxi = MaxMean(reg='l1', strength=0.01)             # Taxicab norm
+maxmean_eucl = MaxMean(reg='l2', strength=0.01)             # Euclidean norm
+maxmean_cheby = MaxMean(reg='l-inf', strength=0.01)         # Chebyshev norm
+maxmean_entropy = MaxMean(reg='entropy', strength=0.01)     # Negative entropy of weights
+maxmean_jsd = MaxMean(reg='jsd', strength=0.01)             # Jensen-Shannon divergence
+maxmean_var = MaxMean(reg='variance', strength=0.01)        # Variance of weights
+maxmean_mpad = MaxMean(reg='mpad', strength=0.01)           # Mean pairwise absolute deviation
+maxmean_mpd = MaxMean(reg='mpd', strength=0.01)             # Maximum pairwise deviation
+maxmean_wass = MaxMean(reg='wass-1', strength=0.01)         # Wasserstein-1
 ```
 
 """
 
 import numpy as np
+from scipy.stats import wasserstein_distance
 from opes.errors import PortfolioError
 
 # Small epsilon for numerical stability
@@ -94,23 +96,6 @@ def _shannon_entropy(w):
     neg_entropy = np.sum(w * np.log(w + _SMALL_EPSILON))
 
     return neg_entropy
-
-
-# Helper function for Kullback-Leibler regularization
-# Returns KL-Divergence value from uniform weights
-def _kullback_leibler(w):
-
-    # Absoluting and Normalizing weights
-    w = np.abs(w)
-    w = w / w.sum()
-
-    # Initiating equal weights
-    equal_weight = np.ones(len(w)) / len(w)
-
-    # Computing Kullback-Leibler divergence
-    kl_reg = np.sum(w * np.log(w / (equal_weight + _SMALL_EPSILON)))
-
-    return kl_reg
 
 
 # Helper function for Jensen-Shannon regularization
@@ -139,6 +124,22 @@ def _jensen_shannon(w):
     return js_reg
 
 
+# Helper function for Wasserstein regularization
+# Returns Wasserstein-1 distance from uniform weights
+def _wasserstein_distance(w):
+    # Absoluting and Normalizing weights
+    w = np.abs(w)
+    w = w / w.sum()
+
+    # Initiating equal weights
+    equal_weight = np.ones(len(w)) / len(w)
+
+    # Computing wasserstein-1 distance
+    wass_dist = wasserstein_distance(w, equal_weight)
+
+    return wass_dist
+
+
 # Regularizer finding function
 # Accepts string and returns a function which can be activated while solving the objective
 def _find_regularizer(reg):
@@ -150,11 +151,12 @@ def _find_regularizer(reg):
         "l-inf": lambda w: np.max(np.abs(w)),
         "variance": lambda w: np.var(w) if len(w) >= 2 else 0,
         "mpad": lambda w: np.mean(np.abs(w[:, None] - w[None, :])),
+        "mpd": lambda w: np.abs(np.max(w) - np.min(w)),
         # Regularizers using a helper function
         # The function is returned instead of lambda
         "entropy": _shannon_entropy,
-        "kld": _kullback_leibler,
         "jsd": _jensen_shannon,
+        "wass-1": _wasserstein_distance,
     }
 
     # Checking regularizer validity

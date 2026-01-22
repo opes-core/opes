@@ -331,8 +331,8 @@ class WassRobustMaxMean(Optimizer):
     def _prepare_optimization_inputs(self, data, weight_bounds, w, custom_mean=None):
         # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
         # Checking for mean and weights and assigning optimization data accordingly
+        self.tickers, data = extract_trim(data)
         self.mean = np.mean(data, axis=0) if custom_mean is None else custom_mean
-        self.tickers = extract_trim(data)[0]
         self.weights = np.array(
             np.ones(len(self.tickers)) / len(self.tickers) if w is None else w,
             dtype=float,
@@ -490,6 +490,7 @@ class WassRobustMinVariance(Optimizer):
     def _prepare_optimization_inputs(self, data, weight_bounds, w, custom_cov=None):
         # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
         # Checking for mean and weights and assigning optimization data accordingly
+        self.tickers, data = extract_trim(data)
         if custom_cov is None:
             # Handling invertibility using the small epsilon * identity matrix
             # small epsilon scales with the trace of the covariance
@@ -500,7 +501,6 @@ class WassRobustMinVariance(Optimizer):
             )
         else:
             self.covariance = custom_cov
-        self.tickers = extract_trim(data)[0]
         self.weights = np.array(
             np.ones(len(self.tickers)) / len(self.tickers) if w is None else w,
             dtype=float,
@@ -667,6 +667,7 @@ class WassRobustMeanVariance(Optimizer):
     ):
         # Extracting trimmed return data from OHLCV and obtaining tickers and Checking for initial weights
         # Checking for mean and weights and assigning optimization data accordingly
+        self.tickers, data = extract_trim(data)
         self.mean = np.mean(data, axis=0) if custom_mean is None else custom_mean
         if custom_cov is None:
             # Handling invertibility using the small epsilon * identity matrix
@@ -678,7 +679,6 @@ class WassRobustMeanVariance(Optimizer):
             )
         else:
             self.covariance = custom_cov
-        self.tickers = extract_trim(data)[0]
         self.weights = np.array(
             np.ones(len(self.tickers)) / len(self.tickers) if w is None else w,
             dtype=float,
