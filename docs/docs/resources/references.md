@@ -27,6 +27,7 @@
 * **Choueifaty, Y., & Coignard, Y. (2008).** Toward Maximum Diversification. *Journal of Portfolio Management*, 35(1), 40–51.
 * **Mercurio, P. J., Wu, Y., & Xie, H. (2020).** An Entropy-Based Approach to Portfolio Optimization. *Entropy*, 22(3), 332. https://doi.org/10.3390/e22030332
 * **Mercurio, P. J., Wu, Y., & Xie, H. (2020).** Portfolio Optimization for Binary Options Based on Relative Entropy. *Entropy*, 22(7), 752. https://doi.org/10.3390/e22070752
+* **López de Prado, Marcos**, Building Diversified Portfolios that Outperform Out-of-Sample (May 23, 2016). *The Journal of Portfolio Management  Summer 2016*, 42  (4) 59 - 69. https://doi.org/10.3905/jpm.2016.42.4.059
 
 ---
 

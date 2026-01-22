@@ -132,7 +132,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the dro Kelly module
-    from opes.objectives.distributionally_robust import KLRobustKelly
+    from opes.objectives import KLRobustKelly
 
     # Let this be your ticker data
     training_data = some_data()
@@ -289,7 +289,7 @@ Uses the log-sum-exp technique to solve for numerical stability.
 !!! example "Example:"
     ```python
     # Importing the dro maximum mean module
-    from opes.objectives.distributionally_robust import KLRobustMaxMean
+    from opes.objectives import KLRobustMaxMean
 
     # Let this be your ticker data
     training_data = some_data()
@@ -449,7 +449,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the dro maximum mean module
-    from opes.objectives.distributionally_robust import WassRobustMaxMean
+    from opes.objectives import WassRobustMaxMean
 
     # Let this be your ticker data
     training_data = some_data()
@@ -623,7 +623,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the dro mean-variance module
-    from opes.objectives.distributionally_robust import WassRobustMeanVariance
+    from opes.objectives import WassRobustMeanVariance
 
     # Let this be your ticker data
     training_data = some_data()
@@ -792,7 +792,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the dro minimum variance module
-    from opes.objectives.distributionally_robust import WassRobustMinVariance
+    from opes.objectives import WassRobustMinVariance
 
     # Let this be your ticker data
     training_data = some_data()

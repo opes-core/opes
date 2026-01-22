@@ -33,6 +33,7 @@ The information provided by OPES is for educational, research and informational 
 |                                          | Maximum Sharpe Ratio                               |
 | **Principled Heuristics**                | Uniform (1/N)                                      |
 |                                          | Risk Parity                                        |
+|                                          | Hierarchical Risk Parity                           |
 |                                          | Inverse Volatility                                 |
 |                                          | Softmax Mean                                       |
 |                                          | Maximum Diversification                            |
@@ -106,7 +107,7 @@ Alternatively, you are also welcome to install directly from the GitHub reposito
 
 ```bash
 git clone https://github.com/opes-core/opes.git
-cd opes
+cd opes-main
 pip install .
 ```
 
@@ -162,7 +163,7 @@ asset_data = yf.download(
 kelly_portfolio = Kelly(fraction=0.8, reg="l2", strength=0.001)
 
 # Compute portfolio weights with custom weight bounds
-kelly_portfolio.optimize(data, weight_bounds=(0.05, 0.8))
+kelly_portfolio.optimize(asset_data, weight_bounds=(0.05, 0.8))
 
 # Clean negligible allocations
 cleaned_weights = kelly_portfolio.clean_weights(threshold=1e-6)
@@ -171,7 +172,7 @@ cleaned_weights = kelly_portfolio.clean_weights(threshold=1e-6)
 print(cleaned_weights)
 ```
 
-This showcases the simplicty of the module. However there are far more diverse features you can still explore. If you're looking for more examples, preferably some of them with *"context"*, I recommend you check out the [examples](https://opes.pages.dev/examples/good_strategy/) page within the documentation.
+This showcases the simplicity of the module. However there are far more diverse features you can still explore. If you're looking for more examples, preferably some of them with *"context"*, I recommend you check out the [examples](https://opes.pages.dev/examples/good_strategy/) page within the documentation.
 
 ---
 
@@ -201,7 +202,6 @@ Also it eats up RAM like pac-man.
 These features are still in the works and may or may not appear in later updates:
 
 | **Objective Name (Category)**                    |
-| ------------------------------------------------ |
-| Hierarchical Risk Parity (Principled Heuristics) |              
+| ------------------------------------------------ |             
 | Online Newton Step (Online Learning)             | 
 | ADA-BARRONS (Online Learning)                    |

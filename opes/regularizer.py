@@ -45,6 +45,7 @@ The following objectives do not support regularization:
 - `Uniform`
 - `InverseVolatility`
 - `SoftmaxMean`
+- `HierarchicalRiskParity`
 - `UniversalPortfolios`
 - `ExponentialGradient`
 - `KLRobustMaxMean`

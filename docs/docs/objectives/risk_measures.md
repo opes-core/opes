@@ -142,7 +142,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the CVaR module
-    from opes.objectives.risk_measures import CVaR
+    from opes.objectives import CVaR
 
     # Let this be your ticker data
     training_data = some_data()
@@ -175,7 +175,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the CVaR class
-    from opes.objectives.risk_measures import CVaR
+    from opes.objectives import CVaR
 
     # Set with 'entropy' regularization
     optimizer = CVaR(reg='entropy', strength=0.01)
@@ -343,7 +343,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the EVaR module
-    from opes.objectives.risk_measures import EVaR
+    from opes.objectives import EVaR
 
     # Let this be your ticker data
     training_data = some_data()
@@ -376,7 +376,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the EVaR class
-    from opes.objectives.risk_measures import EVaR
+    from opes.objectives import EVaR
 
     # Set with 'entropy' regularization
     optimizer = EVaR(reg='entropy', strength=0.01)
@@ -546,7 +546,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the ERM module
-    from opes.objectives.risk_measures import EntropicRisk
+    from opes.objectives import EntropicRisk
 
     # Let this be your ticker data
     training_data = some_data()
@@ -579,7 +579,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the EntropicRisk class
-    from opes.objectives.risk_measures import EntropicRisk
+    from opes.objectives import EntropicRisk
 
     # Set with 'entropy' regularization
     optimizer = EntropicRisk(reg='entropy', strength=0.01)
@@ -753,7 +753,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the Mean-CVaR module
-    from opes.objectives.risk_measures import MeanCVaR
+    from opes.objectives import MeanCVaR
 
     # Let this be your ticker data
     training_data = some_data()
@@ -790,7 +790,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the MeanCVaR class
-    from opes.objectives.risk_measures import MeanCVaR
+    from opes.objectives import MeanCVaR
 
     # Set with 'entropy' regularization
     optimizer = MeanCVaR(reg='entropy', strength=0.01)
@@ -966,7 +966,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the Mean-EVaR module
-    from opes.objectives.risk_measures import MeanEVaR
+    from opes.objectives import MeanEVaR
 
     # Let this be your ticker data
     training_data = some_data()
@@ -1003,7 +1003,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the MeanEVaR class
-    from opes.objectives.risk_measures import MeanEVaR
+    from opes.objectives import MeanEVaR
 
     # Set with 'entropy' regularization
     optimizer = MeanEVaR(reg='entropy', strength=0.01)
@@ -1171,7 +1171,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the VaR module
-    from opes.objectives.risk_measures import VaR
+    from opes.objectives import VaR
 
     # Let this be your ticker data
     training_data = some_data()
@@ -1374,7 +1374,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the worst-case loss module
-    from opes.objectives.risk_measures import WorstCaseLoss
+    from opes.objectives import WorstCaseLoss
 
     # Let this be your ticker data
     training_data = some_data()
@@ -1407,7 +1407,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the WorstCaseLoss class
-    from opes.objectives.risk_measures import WorstCaseLoss
+    from opes.objectives import WorstCaseLoss
 
     # Set with 'entropy' regularization
     optimizer = WorstCaseLoss(reg='entropy', strength=0.01)

@@ -15,6 +15,179 @@ to outperform their theoretically optimal cousins outside the textbook.
 
 
 
+## `HierarchicalRiskParity`
+
+```python
+class HierarchicalRiskParity(cluster_method='average')
+```
+
+Hierarchical Risk Parity (HRP) optimization.
+
+Hierarchical Risk Parity (HRP), introduced by L≤pez de Prado,
+is a portfolio construction methodology that allocates capital
+through hierarchical clustering and recursive risk balancing
+rather than direct optimization of a scalar objective. HRP
+addresses several structural weaknesses of traditional
+mean-variance and risk parity approaches, including sensitivity
+to covariance matrix estimation error, numerical instability
+arising from matrix inversion and over-concentration in highly
+correlated assets. By organizing assets into a hierarchy based
+on correlation structure and allocating weights inversely to
+cluster-level variance, HRP achieves diversification across
+both individual assets and correlated groups. This procedure
+yields stable, fully invested portfolios that are robust
+out-of-sample and well-suited for high-dimensional or noisy
+return environments, particularly when covariance estimates are
+ill-conditioned.
+
+**Args:**
+
+- `cluster_method` (*str, optional*): Clustering method to be used for hierarchical clustering. Defaults to `'average'`. Available methods are:
+    - '`average`': Merges clusters based on the minimum pairwise distance, often producing elongated, chain-like clusters.
+    - '`single'`: Merges clusters based on the maximum pairwise distance, favoring compact and tightly bound clusters.
+    - `'complete'`: Merges clusters using the average pairwise distance between all points in each cluster, providing a balanced compromise between single and complete linkage.
+    - '`ward`': Merges clusters to minimize the increase in within-cluster variance, producing balanced clusters aligned with variance-based portfolio construction.
+
+### Methods
+
+#### `clean_weights`
+
+```python
+def clean_weights(threshold=1e-08)
+```
+
+Cleans the portfolio weights by setting very small positions to zero.
+
+Any weight whose absolute value is below the specified `threshold` is replaced with zero.
+This helps remove negligible allocations while keeping the array structure intact. This method
+requires portfolio optimization (`optimize()` method) to take place for `self.weights` to be
+defined other than `None`.
+
+!!! warning "Warning:"
+    This method modifies the existing portfolio weights in place. After cleaning, re-optimization
+    is required to recover the original weights.
+
+**Args**
+
+- `threshold` (*float, optional*): Float specifying the minimum absolute weight to retain. Defaults to `1e-8`.
+
+
+**Returns:**
+
+- `numpy.ndarray`: Cleaned and re-normalized portfolio weight vector.
+
+**Raises**
+
+- `PortfolioError`: If weights have not been calculated via optimization.
+
+
+!!! note "Notes:"
+    - Weights are cleaned using absolute values, making this method compatible with long-short portfolios.
+    - Re-normalization ensures the portfolio remains properly scaled after cleaning.
+    - Increasing threshold promotes sparsity but may materially alter the portfolio composition.
+
+#### `optimize`
+
+```python
+def optimize(data, custom_cov=None)
+```
+
+Computes the Hierarchical Risk Parity portfolio:
+
+$$
+\mathbf{w}_i \propto \frac{1}{\sigma^2_{\text{cluster}}}
+$$
+
+!!! note "Note"
+    Asset weight bounds are defaulted to (0,1).
+
+**Args**
+
+- `data` (*pd.DataFrame*): Ticker price data in either multi-index or single-index formats. Examples are given below:
+  ```
+  # Single-Index Example
+  Ticker           TSLA      NVDA       GME        PFE       AAPL  ...
+  Date
+  2015-01-02  14.620667  0.483011  6.288958  18.688917  24.237551  ...
+  2015-01-05  14.006000  0.474853  6.460137  18.587513  23.554741  ...
+  2015-01-06  14.085333  0.460456  6.268492  18.742599  23.556952  ...
+  2015-01-07  14.063333  0.459257  6.195926  18.999102  23.887287  ...
+  2015-01-08  14.041333  0.476533  6.268492  19.386841  24.805082  ...
+  ...
+
+  # Multi-Index Example Structure (OHLCV)
+  Columns:
+  + Ticker (e.g. GME, PFE, AAPL, ...)
+  - Open
+  - High
+  - Low
+  - Close
+  - Volume
+  ```
+- `custom_cov` (*None or array-like of shape (n_assets, n_assets), optional*): Custom covariance matrix. Can be used to inject externally generated covariance matrices (eg. Ledoit-Wolf). Defaults to `None`.
+
+
+**Returns:**
+
+- `np.ndarray`: Vector of optimized portfolio weights.
+
+**Raises**
+
+- `DataError`: For any data mismatch during integrity check.
+- `PortfolioError`: For any invalid portfolio variable inputs during integrity check.
+
+
+!!! example "Example:"
+    ```python
+    # Importing the HRP module
+    from opes.objectives import HierarchicalRiskParity as HRP
+
+    # Let this be your ticker data
+    training_data = some_data()
+
+    # Let this be your custom covariance matrix
+    cov_m = covMatrix()
+
+    # Initialize with custom clustering method
+    hrp_portfolio = HRP(cluster_method='ward')
+
+    # Optimize portfolio with custom covariance matrix
+    weights = hrp_portfolio.optimize(data=training_data, custom_cov=cov_m)
+    ```
+
+#### `stats`
+
+```python
+def stats()
+```
+
+Calculates and returns portfolio concentration and diversification statistics.
+
+These statistics help users to inspect portfolio's overall concentration in
+allocation. For the method to work, the optimizer must have been initialized, i.e.
+the `optimize()` method should have been called at least once for `self.weights`
+to be defined other than `None`.
+
+**Returns:**
+
+- A `dict` containing the following keys:
+    - `'tickers'` (*list*): A list of tickers used for optimization.
+    - `'weights'` (*np.ndarry*): Portfolio weights, output from optimization.
+    - `'portfolio_entropy'` (*float*): Shannon entropy computed on portfolio weights.
+    - `'herfindahl_index'` (*float*): Herfindahl Index value, computed on portfolio weights.
+    - `'gini_coefficient'` (*float*): Gini Coefficient value, computed on portfolio weights.
+    - `'absolute_max_weight'` (*float*): Absolute maximum allocation for an asset.
+
+**Raises**
+
+- `PortfolioError`: If weights have not been calculated via optimization.
+
+
+!!! note "Notes:"
+    - All statistics are computed on absolute normalized weights (within the simplex), ensuring compatibility with long-short portfolios.
+    - This method is diagnostic only and does not modify portfolio weights.
+    - For meaningful interpretation, use these metrics in conjunction with risk and performance measures.
+
 ## `InverseVolatility`
 
 ```python
@@ -125,7 +298,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the Inverse Volatility Portfolio (IVP) module
-    from opes.objectives.heuristics import InverseVolatility as IVP
+    from opes.objectives import InverseVolatility as IVP
 
     # Let this be your ticker data
     training_data = some_data()
@@ -297,7 +470,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the maximum diversification module
-    from opes.objectives.heuristics import MaxDiversification
+    from opes.objectives import MaxDiversification
 
     # Let this be your ticker data
     training_data = some_data()
@@ -333,7 +506,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the MaxDiversification class
-    from opes.objectives.heuristics import MaxDiversification
+    from opes.objectives import MaxDiversification
 
     # Set with 'entropy' regularization
     optimizer = MaxDiversification(reg='entropy', strength=0.01)
@@ -511,12 +684,12 @@ $$
 !!! example "Example:"
     ```python
     # Importing the REPO module
-    from opes.objectives.heuristics import REPO
+    from opes.objectives import REPO
 
     # Let this be your ticker data
     training_data = some_data()
 
-    # Let these be your custom mean vector
+    # Let this be your custom mean vector
     mean_v = customMean()
 
     # Initialize with custom regularization
@@ -547,7 +720,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the REPO class
-    from opes.objectives.heuristics import REPO
+    from opes.objectives import REPO
 
     # Set with 'entropy' regularization
     optimizer = REPO(reg='entropy', strength=0.01)
@@ -714,7 +887,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the risk parity module
-    from opes.objectives.heuristics import RiskParity
+    from opes.objectives import RiskParity
 
     # Let this be your ticker data
     training_data = some_data()
@@ -750,7 +923,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the RiskParity class
-    from opes.objectives.heuristics import RiskParity
+    from opes.objectives import RiskParity
 
     # Set with 'entropy' regularization
     optimizer = RiskParity(reg='entropy', strength=0.01)
@@ -911,7 +1084,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the softmax mean module
-    from opes.objectives.heuristics import SoftmaxMean
+    from opes.objectives import SoftmaxMean
 
     # Let this be your ticker data
     training_data = some_data()
@@ -1070,7 +1243,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the equal-weight module
-    from opes.objectives.heuristics import Uniform
+    from opes.objectives import Uniform
 
     # Let this be your ticker data
     training_data = some_data()

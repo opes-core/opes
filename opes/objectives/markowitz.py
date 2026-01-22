@@ -112,7 +112,7 @@ class MaxMean(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the maximum mean module
-            from opes.objectives.markowitz import MaxMean
+            from opes.objectives import MaxMean
 
             # Let this be your ticker data
             training_data = some_data()
@@ -148,7 +148,7 @@ class MaxMean(Optimizer):
         )
         if result.success:
             self.weights = result.x
-            return self.weights
+            return self.weights.copy()
         else:
             raise OptimizationError(
                 f"Maximum mean optimization failed: {result.message}"
@@ -169,7 +169,7 @@ class MaxMean(Optimizer):
         !!! example "Example:"
             ```python
             # Import the MaxMean class
-            from opes.objectives.markowitz import MaxMean
+            from opes.objectives import MaxMean
 
             # Set with 'entropy' regularization
             optimizer = MaxMean(reg='entropy', strength=0.01)
@@ -292,7 +292,7 @@ class MinVariance(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the Global Minimum Variance (GMV) module
-            from opes.objectives.markowitz import MinVariance
+            from opes.objectives import MinVariance
 
             # Let this be your ticker data
             training_data = some_data()
@@ -326,7 +326,7 @@ class MinVariance(Optimizer):
         )
         if result.success:
             self.weights = result.x
-            return self.weights
+            return self.weights.copy()
         else:
             raise OptimizationError(
                 f"Global minimum optimization failed: {result.message}"
@@ -347,7 +347,7 @@ class MinVariance(Optimizer):
         !!! example "Example:"
             ```python
             # Import the MinVariance class
-            from opes.objectives.markowitz import MinVariance
+            from opes.objectives import MinVariance
 
             # Set with 'entropy' regularization
             optimizer = MinVariance(reg='entropy', strength=0.01)
@@ -474,7 +474,7 @@ class MeanVariance(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the mean variance module
-            from opes.objectives.markowitz import MeanVariance
+            from opes.objectives import MeanVariance
 
             # Let this be your ticker data
             training_data = some_data()
@@ -514,7 +514,7 @@ class MeanVariance(Optimizer):
         )
         if result.success:
             self.weights = result.x
-            return self.weights
+            return self.weights.copy()
         else:
             raise OptimizationError(
                 f"Mean variance optimization failed: {result.message}"
@@ -535,7 +535,7 @@ class MeanVariance(Optimizer):
         !!! example "Example:"
             ```python
             # Import the MeanVariance class
-            from opes.objectives.markowitz import MeanVariance
+            from opes.objectives import MeanVariance
 
             # Set with 'entropy' regularization
             optimizer = MeanVariance(reg='entropy', strength=0.01)
@@ -662,7 +662,7 @@ class MaxSharpe(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the maximum sharpe module
-            from opes.objectives.markowitz import MaxSharpe
+            from opes.objectives import MaxSharpe
 
             # Let this be your ticker data
             training_data = some_data()
@@ -701,7 +701,7 @@ class MaxSharpe(Optimizer):
         )
         if result.success:
             self.weights = result.x / (result.x.sum() + 1e-12)
-            return self.weights
+            return self.weights.copy()
         else:
             raise OptimizationError(
                 f"Maximum sharpe optimization failed: {result.message}"
@@ -722,7 +722,7 @@ class MaxSharpe(Optimizer):
         !!! example "Example:"
             ```python
             # Import the MaxSharpe class
-            from opes.objectives.markowitz import MaxSharpe
+            from opes.objectives import MaxSharpe
 
             # Set with 'entropy' regularization
             optimizer = MaxSharpe(reg='entropy', strength=0.01)

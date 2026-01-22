@@ -159,7 +159,7 @@ class UniversalPortfolios(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the universal portfolios module
-            from opes.objectives.online import UniversalPortfolios as UP
+            from opes.objectives import UniversalPortfolios as UP
 
             # Let this be your ticker data
             training_data = some_data()
@@ -192,7 +192,7 @@ class UniversalPortfolios(Optimizer):
 
         # Normalization and finding optimal weights
         self.weights = wealth_weighted_portfolio / portfolio_wealths.sum()
-        return self.weights
+        return self.weights.copy()
 
 
 class BCRP(Optimizer):
@@ -280,7 +280,7 @@ class BCRP(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the BCRP module
-            from opes.objectives.online import BCRP
+            from opes.objectives import BCRP
 
             # Let this be your ticker data
             training_data = some_data()
@@ -310,7 +310,7 @@ class BCRP(Optimizer):
         )
         if result.success:
             self.weights = result.x
-            return self.weights
+            return self.weights.copy()
         else:
             raise OptimizationError(f"BCRP optimization failed: {result.message}")
 
@@ -330,7 +330,7 @@ class BCRP(Optimizer):
         !!! example "Example:"
             ```python
             # Import the BCRP class
-            from opes.objectives.online import BCRP
+            from opes.objectives import BCRP
 
             # Set with 'entropy' regularization
             ftrl = BCRP(reg='entropy', strength=0.01)
@@ -431,7 +431,7 @@ class ExponentialGradient(Optimizer):
         !!! example "Example:"
             ```python
             # Importing the exponential gradient module
-            from opes.objectives.online import ExponentialGradient as EG
+            from opes.objectives import ExponentialGradient as EG
 
             # Let this be your ticker data
             training_data = some_data()
@@ -464,4 +464,4 @@ class ExponentialGradient(Optimizer):
         new_weights = np.exp(log_w)
         self.weights = new_weights / new_weights.sum()
 
-        return self.weights
+        return self.weights.copy()

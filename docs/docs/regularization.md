@@ -29,10 +29,10 @@ where $R(\mathbf{w})$ encodes structural preferences over the weights $\mathbf{w
  | Wasserstein-1 Distance from Uniform Weights     | `wass-1`   | $\text{W}_{1}(\mathbf{w}, \mathbf{u})$                                             |
 
 !!! note "Notes"
-    - `l1` regularization is mainly used for long-short portfolios to encourage less extreme 
+    - `l1` regularization is mainly used for long-short portfolios to encourage less extreme
     allocations to meet the net exposure of 1. Using it on long-only portfolios is redundant.
-    - For long-short portfolios, mathematically grounded regularizers such as `entropy`, `jsd` 
-    and `wass-1` first normalize the weights and constrain them to the simplex before applying 
+    - For long-short portfolios, mathematically grounded regularizers such as `entropy`, `jsd`
+    and `wass-1` first normalize the weights and constrain them to the simplex before applying
     the regularization, ensuring mathematical coherence is not violated.
 
 ---
@@ -46,6 +46,7 @@ The following objectives do not support regularization:
 - `Uniform`
 - `InverseVolatility`
 - `SoftmaxMean`
+- `HierarchicalRiskParity`
 - `UniversalPortfolios`
 - `ExponentialGradient`
 - `KLRobustMaxMean`

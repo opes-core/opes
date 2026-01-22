@@ -126,7 +126,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the CARA class
-    from opes.objectives.utility_theory import CARA
+    from opes.objectives import CARA
 
     # Let this be your ticker data
     training_data = some_data()
@@ -159,7 +159,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the CARA class
-    from opes.objectives.utility_theory import CARA
+    from opes.objectives import CARA
 
     # Set with 'entropy' regularization
     optimizer = CARA(reg='entropy', strength=0.01)
@@ -319,7 +319,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the CRRA class
-    from opes.objectives.utility_theory import CRRA
+    from opes.objectives import CRRA
 
     # Let this be your ticker data
     training_data = some_data()
@@ -352,7 +352,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the CRRA class
-    from opes.objectives.utility_theory import CRRA
+    from opes.objectives import CRRA
 
     # Set with 'entropy' regularization
     optimizer = CRRA(reg='entropy', strength=0.01)
@@ -526,7 +526,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the HARA class
-    from opes.objectives.utility_theory import HARA
+    from opes.objectives import HARA
 
     # Let this be your ticker data
     training_data = some_data()
@@ -559,7 +559,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the HARA class
-    from opes.objectives.utility_theory import HARA
+    from opes.objectives import HARA
 
     # Set with 'entropy' regularization
     optimizer = HARA(reg='entropy', strength=0.01)
@@ -720,7 +720,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the kelly criterion module
-    from opes.objectives.utility_theory import Kelly
+    from opes.objectives import Kelly
 
     # Let this be your ticker data
     training_data = some_data()
@@ -753,7 +753,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the Kelly Criterion class
-    from opes.objectives.utility_theory import Kelly
+    from opes.objectives import Kelly
 
     # Set with 'entropy' regularization
     optimizer = Kelly(reg='entropy', strength=0.01)
@@ -912,7 +912,7 @@ $$
 !!! example "Example:"
     ```python
     # Importing the Quadratic Utility class
-    from opes.objectives.utility_theory import QuadraticUtility as QU
+    from opes.objectives import QuadraticUtility as QU
 
     # Let this be your ticker data
     training_data = some_data()
@@ -945,7 +945,7 @@ initiating a new one.
 !!! example "Example:"
     ```python
     # Import the Quadratic Utility class
-    from opes.objectives.utility_theory import QuadraticUtility
+    from opes.objectives import QuadraticUtility
 
     # Set with 'entropy' regularization
     optimizer = QuadraticUtility(reg='entropy', strength=0.01)

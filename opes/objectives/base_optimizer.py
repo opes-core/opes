@@ -144,4 +144,4 @@ class Optimizer(ABC):
         else:
             self.weights[np.abs(self.weights) < threshold] = 0
             self.weights /= np.abs(self.weights).sum()
-            return self.weights
+            return self.weights.copy()

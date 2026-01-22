@@ -23,6 +23,7 @@ from .heuristics import (
     MaxDiversification,
     RiskParity,
     REPO,
+    HierarchicalRiskParity,
 )
 
 # Online Portfolios
