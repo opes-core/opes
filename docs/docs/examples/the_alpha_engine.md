@@ -192,8 +192,8 @@ alpha_strategy = SuperDuperAlphaEngine()
 # Initialize our backtester
 tester = Backtester(train_data=train, test_data=test, cost={'const': 40})
 
-# Backtest with `rebalance_freq` set to 1 for daily momentum
-alpha_returns = tester.backtest(optimizer=alpha_strategy, rebalance_freq=1)
+# Backtest with `rebalance_freq` and `reopt_freq` set to 1 for daily momentum
+alpha_returns = tester.backtest(optimizer=alpha_strategy, rebalance_freq=1, reopt_freq=1)
 ```
 
 Upon having `alpha_returns` we can use it to plot wealth and get metrics.

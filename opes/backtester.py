@@ -10,7 +10,7 @@ all portfolio decisions are made using only information available at the time of
 ---
 """
 
-from numbers import Real
+from numbers import Real, Integral as Integer
 import time
 import inspect
 
@@ -20,7 +20,7 @@ import scipy.stats as scistats
 import matplotlib.pyplot as plt
 
 from opes.errors import PortfolioError, DataError
-from opes.utils import slippage, extract_trim
+from opes.utils import extract_trim
 
 
 class Backtester:
@@ -79,7 +79,7 @@ class Backtester:
         self.cost = cost
 
     def _backtest_integrity_check(
-        self, optimizer, rebalance_freq, seed, cleanweights=False
+        self, optimizer, rebalance_freq, reopt_freq, seed, cleanweights=False
     ):
         # Checking train and test data validity
         if not isinstance(self.train, pd.DataFrame):
@@ -111,11 +111,15 @@ class Backtester:
                 f"Expected optimizer object to have 'optimize' attribute."
             )
         # Checking rebalance frequency type and validity
-        if rebalance_freq is not None:
-            if rebalance_freq <= 0 or not isinstance(rebalance_freq, int):
-                raise PortfolioError(
-                    f"Invalid rebalance frequency. Expected integer within bounds [1,T], Got {rebalance_freq}"
-                )
+        if not isinstance(rebalance_freq, Integer) or rebalance_freq <= 0:
+            raise PortfolioError(
+                f"Invalid rebalance frequency. Expected integer within bounds [1,T], Got {rebalance_freq}"
+            )
+        # Checking re-optimization frequency type validity
+        if not isinstance(reopt_freq, Integer) or reopt_freq <= 0:
+            raise PortfolioError(
+                f"Invalid re-optimization frequency. Expected integer within bounds [1,T], Got {reopt_freq}"
+            )
         # Validiating numpy seed
         if seed is not None and not isinstance(seed, int):
             raise PortfolioError(f"Invalid seed. Expected integer or None, Got {seed}")
@@ -150,35 +154,116 @@ class Backtester:
                 f"Invalid jump cost model parameter length. Expected 3, got {len(self.cost[first_key])}"
             )
 
+    # Helper method to combine datasets
+    # Combines training and testing data upto a particular timestep
+    def _combine_datasets(self, upto_timestep):
+        # NO LOOKAHEAD BIAS
+        # Rebalance at timestep t using only past data (up to t, exclusive) to avoid lookahead bias
+        # Training data is pre-cleaned (no NaNs), test data up to t is also NaN-free
+        # Concatenating them preserves this property; dropna() handles edge cases safely
+        # The optimizer therefore only sees information available until the current decision point
+        combined_dataset = pd.concat([self.train, self.test.iloc[:upto_timestep]])
+        combined_dataset = combined_dataset[
+            ~combined_dataset.index.duplicated(keep="first")
+        ].dropna()
+
+        return combined_dataset
+
+    # Helper method to compute drifted weights for timestep
+    # Returns the realized drifted weights for the timestep
+    def _compute_drifted_weights(self, w_prev, returns):
+        w_prev = np.asarray(w_prev)
+        w_realized = (w_prev * (1 + returns)) / (1 + np.sum(w_prev * returns))
+
+        return w_realized
+
+    # Helper method to compute costs array
+    # Returns either a constant or an array of length=horizon of cost
+    def _slippage_costs(self, cost, horizon, numpy_seed=None):
+        # Setting numpy seed and finding cost parameters
+        numpy_rng = np.random.default_rng(numpy_seed)
+        cost_key = next(iter(cost)).lower()
+        cost_params = cost[cost_key]
+
+        # ---------- COST MODELS ----------
+        match cost_key:
+            # Constant slippage
+            case "const":
+                return cost_params / 10000
+            # Gamma distributed slippage
+            case "gamma":
+                return (
+                    numpy_rng.gamma(
+                        shape=cost_params[0], scale=cost_params[1], size=horizon
+                    )
+                    / 10000
+                )
+            # Lognormally distributed slippage
+            case "lognormal":
+                return (
+                    numpy_rng.lognormal(
+                        mean=cost_params[0], sigma=cost_params[1], size=horizon
+                    )
+                    / 10000
+                )
+            # Inverse gaussian slippage
+            case "inversegaussian":
+                return (
+                    numpy_rng.wald(
+                        mean=cost_params[0], scale=cost_params[1], size=horizon
+                    )
+                    / 10000
+                )
+            # Compound-poisson lognormal slippage (jump process)
+            case "jump":
+                N = numpy_rng.poisson(cost_params[0], size=horizon)
+                jump_cost = np.array(
+                    [
+                        (
+                            np.sum(
+                                numpy_rng.lognormal(
+                                    mean=cost_params[1], sigma=cost_params[2], size=n
+                                )
+                            )
+                            if n > 0
+                            else 0
+                        )
+                        for n in N
+                    ]
+                )
+                return jump_cost / 10000
+            case _:
+                raise DataError(f"Unknown cost model: {cost_key}")
+
     def backtest(
         self,
         optimizer,
-        rebalance_freq=None,
-        seed=None,
+        rebalance_freq=1,
+        reopt_freq=1,
+        seed=100,
         weight_bounds=None,
         clean_weights=False,
     ):
         """
         Execute a portfolio backtest over the test dataset using a given optimizer.
 
-        This method performs either a static-weight backtest or a rolling-weight
-        backtest depending on whether `rebalance_freq` is specified. It also
-        applies transaction costs and ensures no lookahead bias during rebalancing.
+        This method performs a walk-forward backtest using the user defined `rebalance_freq`
+        and `reopt_freq`. It also applies transaction costs and ensures no lookahead bias.
         For a rolling backtest, any common date values are dropped, the first occurrence
         is considered to be original and kept.
 
         !!! warning "Warning:"
             Some online learning methods such as `ExponentialGradient` update weights based
-            on the most recent observations. Setting `rebalance_freq` to any value other
-            than `1` (or possibly `None`) may result in suboptimal performance, as
-            intermediate data points will be ignored and not used for weight updates.
-            Proceed with caution when using other rebalancing frequencies with online learning algorithms.
+            on the most recent observations. Setting `reopt_freq` to any value other
+            than `1` may result in suboptimal performance, as intermediate data points will
+            be ignored and not used for weight updates.
 
         **Args:**
 
         - `optimizer`: An optimizer object containing the optimization strategy. Accepts both OPES built-in objectives and externally constructed optimizer objects.
-        - `rebalance_freq` (*int or None, optional*): Frequency of rebalancing (re-optimization) in time steps. If `None`, a static weight backtest is performed. Defaults to `None`.
-        - `seed` (*int or None, optional*): Random seed for reproducible cost simulations. Defaults to `None`.
+        - `rebalance_freq` (*int, optional*): Frequency of rebalancing in time steps. Must be `>= 1`. Defaults to `1`.
+        - `reopt_freq` (*int, optional*): Frequency of re-optimization in time steps. Must be `>= 1`. Defaults to `1`.
+        - `seed` (*int or None, optional*): Random seed for reproducible cost simulations. Defaults to `100`.
         - `weight_bounds` (*tuple, optional*): Bounds for portfolio weights passed to the optimizer if supported.
 
         !!! abstract "Rules for `optimizer` Object"
@@ -188,22 +273,33 @@ class Backtester:
                 - `**kwargs`: For safety against breaking changes.
             - `optimize` must output weights for the timestep.
 
+        !!! note "Note"
+            - Re-optimization does not automatically imply rebalancing. When the portfolio is re-optimized at a given timestep, weights may or may not be updated depending on the value of `rebalance_freq`.
+            - To ensure a coherent backtest, a common practice is to choose frequencies such that `reopt_freq % rebalance_freq == 0`. This guarantees that whenever optimization occurs, a rebalance is also performed.
+            - Also note that within a given timestep, rebalancing, if it occurs, is performed after optimization when optimization is scheduled for that timestep.
+
+        !!! tip "Tip"
+            Common portfolio styles can be constructed by appropriate choices of `rebalance_freq` and `reopt_freq`:
+
+            - Buy-and-Hold: `rebalance_freq > horizon`, `reopt_freq > horizon`
+            - Constantly Rebalanced: `rebalance_freq = 1`, `reopt_freq > horizon`
+            - Fully Dynamic: `rebalance_freq = 1`, `reopt_freq = 1`
+
         **Returns:**
 
         - `dict`: Backtest results containing the following keys:
             - `'returns'` (*np.ndarray*): Portfolio returns after accounting for costs.
             - `'weights'` (*np.ndarray*): Portfolio weights at each timestep.
             - `'costs'` (*np.ndarray*): Transaction costs applied at each timestep.
-            - `'dates'` (*np.ndarray*): Dates on which the backtest was conducted.
+            - `'timeline'` (*np.ndarray*): Timeline on which the backtest was conducted.
 
         Raises:
             DataError: If the optimizer does not accept weight bounds but `weight_bounds` are provided.
             PortfolioError: If input validation fails (via `_backtest_integrity_check`).
+            OptimizationError: If the underlying optimizer uses optimization and if it fails to optimize.
 
         !!! note "Notes:"
             - All returned arrays are aligned in time and have length equal to the test dataset.
-            - Static weight backtest: Uses a single set of optimized weights for all test data. This denotes a constant rebalanced portfolio.
-            - Rolling weight backtest: Re-optimizes weights at intervals defined by `rebalance_freq` using only historical data up to the current point to prevent lookahead bias.
             - Returns and weights are stored in arrays aligned with test data indices.
 
         !!! example "Example:"
@@ -211,8 +307,8 @@ class Backtester:
             import numpy as np
 
             # Importing necessary OPES modules
-            from opes.objectives.utility_theory import Kelly
-            from opes.backtester import Backtester
+            from opes.objectives import Kelly
+            from opes import Backtester
 
             # Place holder for your price data
             from some_random_module import trainData, testData
@@ -228,137 +324,120 @@ class Backtester:
             tester = Backtester(train_data=training, test_data=testing)
 
             # Obtaining backtest data for kelly optimizer
-            kelly_backtest = tester.backtest(optimizer=kelly_optimizer, rebalance_freq=21)
+            kelly_backtest = tester.backtest(
+                optimizer=kelly_optimizer,
+                rebalance_freq=1,  # Rebalance daily
+                reopt_freq=21      # Re-optimize monthly
+            )
 
             # Printing results
             for key in kelly_backtest:
                 print(f"{key}: {kelly_backtest[key]}")
             ```
         """
-        # Running backtester integrity checks, extracting test return data and caching optimizer parameters
+        # Running backtester integrity checks, extracting test return data and caching values
         self._backtest_integrity_check(
-            optimizer, rebalance_freq, seed, cleanweights=clean_weights
+            optimizer, rebalance_freq, reopt_freq, seed, cleanweights=clean_weights
         )
         test_data = extract_trim(self.test)[1]
         optimizer_parameters = inspect.signature(optimizer.optimize).parameters
+        horizon = len(test_data)
 
-        # ---------- BACKTEST LOOPS ----------
+        # ---------- BACKTEST LOOP ----------
 
-        # Static weight backtest
-        if rebalance_freq is None:
+        # Initializing weights list and turnover array
+        # NOTE: More readable than initializing a 2D numpy array
+        weights = [None] * horizon
+        turnover_array = np.zeros(horizon)
 
-            # ---------- STATIC OPTIMIZATION BLOCK ----------
+        # First optimization is done manually using training data
+        # Using weight bounds if it is given AND if it is present as a parameter within optimize method
+        # Otherwise weights are optimized without weight bounds argument
+        kwargs = {}
+        # Checking for weight_bounds
+        if weight_bounds is not None and "weight_bounds" in optimizer_parameters:
+            kwargs["weight_bounds"] = weight_bounds
+        # Optimizing for the timestep
+        optimized_weights = optimizer.optimize(self.train, **kwargs)
 
-            # Using weight bounds if it is given AND if it is present as a parameter within optimize method
-            # Otherwise weights are optimized without weight bounds argument
-            kwargs = {}
-            # Checking for weight_bounds
-            if weight_bounds is not None and "weight_bounds" in optimizer_parameters:
-                kwargs["weight_bounds"] = weight_bounds
-            # Optimizing for the timestep
-            weights = optimizer.optimize(self.train, **kwargs)
+        # Cleaning weights if true and if optimizer has method
+        if clean_weights and hasattr(optimizer, "clean_weights"):
+            optimized_weights = optimizer.clean_weights()
 
-            # ------------------------------------------------
+        # Assigning computed weights to weight array
+        weights[0] = optimized_weights
+        optimizer_parameters = optimizer_parameters
 
-            # Cleaning weights if true and if optimizer has method
-            if clean_weights and hasattr(optimizer, "clean_weights"):
-                weights = optimizer.clean_weights()
-            # Repeating same weights for remaining timeline for static backtest
-            weights_array = np.tile(weights, (len(test_data), 1))
+        # For loop through timesteps to automate remaining walk-forward test
+        for t in range(1, horizon):
 
-        # Rolling weight (Walk-forward) backtest
-        if rebalance_freq is not None:
-            # Initializing weights list
-            # NOTE: More readable than initializing a 2D numpy array
-            weights = [None] * len(test_data)
+            # ---------- RE-OPTIMIZATION BLOCK ----------
+            # Re-optimization check during appropriate frequency
+            # If the check is satisfied optimization is taken place and the new weights are computed
+            # NOTE: Rebalancing is handled separately using `rebalance_freq`
+            if t % reopt_freq == 0:
 
-            # ---------- INITIAL OPTIMIZATION BLOCK ----------
+                combined_dataset = self._combine_datasets(upto_timestep=t)
 
-            # First optimization is done manually using training data
-            # Using weight bounds if it is given AND if it is present as a parameter within optimize method
-            # Otherwise weights are optimized without weight bounds argument
-            kwargs = {}
-            # Checking for weight_bounds
-            if weight_bounds is not None and "weight_bounds" in optimizer_parameters:
-                kwargs["weight_bounds"] = weight_bounds
-            # Optimizing for the timestep
-            temp_weights = optimizer.optimize(self.train, **kwargs)
+                # We find if 'w' and 'weight_bounds' parameters are present within the optimizer
+                # The parameters which are present are leveraged (Eg. warm start, weight updates for 'w')
+                # Otherwise it is optimized without any extra arguments
+                kwargs = {}
+                if "w" in optimizer_parameters:
+                    kwargs["w"] = optimized_weights
+                if (
+                    weight_bounds is not None
+                    and "weight_bounds" in optimizer_parameters
+                ):
+                    kwargs["weight_bounds"] = weight_bounds
 
-            # --------------------------------------------------
+                # Optimizing for the timestep
+                optimized_weights = optimizer.optimize(combined_dataset, **kwargs)
 
-            # Cleaning weights if true and if optimizer has method
-            if clean_weights and hasattr(optimizer, "clean_weights"):
-                temp_weights = optimizer.clean_weights()
+                # Cleaning weights if true and if optimizer has method
+                if clean_weights and hasattr(optimizer, "clean_weights"):
+                    optimized_weights = optimizer.clean_weights()
+
+            # ---------- REBALANCING BLOCK ----------
+            # Computing drifted weights
+            # This is necessary for turnover and slippage modelling
+            drifted_weights = self._compute_drifted_weights(
+                weights[t - 1], test_data[t]
+            )
 
             # Assigning computed weights to weight array
-            weights[0] = temp_weights
-            optimizer_parameters = optimizer_parameters
+            # If rebalance frequency is satisfied, then the weights for the timestep is the optimized weights
+            # Otherwise, the weights for the timestep is the drifted (realized) weights
+            if t % rebalance_freq == 0:
+                weights[t] = optimized_weights
+            else:
+                weights[t] = drifted_weights
 
-            # For loop through timesteps to automate remaining walk-forward test
-            for t in range(1, len(test_data)):
-
-                # Rebalancing (Re-optimizing) during appropriate frequency
-                if t % rebalance_freq == 0:
-
-                    # ---------- WALK FORWARD OPTIMIZATION BLOCK ----------
-
-                    # NO LOOKAHEAD BIAS
-                    # Rebalance at timestep t using only past data (up to t, exclusive) to avoid lookahead bias
-                    # Training data is pre-cleaned (no NaNs), test data up to t is also NaN-free
-                    # Concatenating them preserves this property; dropna() handles edge cases safely
-                    # The optimizer therefore only sees information available until the current decision point
-                    combined_dataset = pd.concat([self.train, self.test.iloc[:t]])
-                    combined_dataset = combined_dataset[
-                        ~combined_dataset.index.duplicated(keep="first")
-                    ].dropna()
-                    # We find if 'w' and 'weight_bounds' parameters are present within the optimizer
-                    # The parameters which are present are leveraged (Eg. warm start, weight updates for 'w')
-                    # Otherwise it is optimized without any extra arguments
-                    kwargs = {}
-                    # Checking for w
-                    if "w" in optimizer_parameters:
-                        kwargs["w"] = temp_weights
-                    # Checking for weight_bounds
-                    if (
-                        weight_bounds is not None
-                        and "weight_bounds" in optimizer_parameters
-                    ):
-                        kwargs["weight_bounds"] = weight_bounds
-                    # Optimizing for the timestep
-                    temp_weights = optimizer.optimize(combined_dataset, **kwargs)
-
-                    # ------------------------------------------------------------
-
-                    # Cleaning weights if true and if optimizer has method
-                    if clean_weights and hasattr(optimizer, "clean_weights"):
-                        temp_weights = optimizer.clean_weights(temp_weights)
-
-                # Assigning computed weights to weight array
-                weights[t] = temp_weights
-
-            # Creating vertical stack for vectorization
-            weights_array = np.vstack(weights)
+            # ---------- TURNOVER BLOCK ----------
+            # Computing turnover
+            # turnover is the L1 distance from current weights to drifted weights
+            # If not rebalanced, turnover is 0
+            turnover_for_timestep = np.sum(np.abs(weights[t] - drifted_weights))
+            turnover_array[t] = turnover_for_timestep
 
         # --------- POST PROCESSING BLOCK ---------
-
-        # Vectorizing portfolio returns, finding cost array and finding final portfolio returns after costs
-        portfolio_returns = np.einsum("ij,ij->i", weights_array, test_data)
-        costs_array = slippage(
-            weights=weights_array,
-            returns=portfolio_returns,
-            cost=self.cost,
-            numpy_seed=seed,
+        # Creating vertical stack for vectorization
+        weights_array = np.vstack(weights)
+        # Computing slippage costs over time, vectorizing portfolio returns and finding final portfolio returns after costs
+        costs_array = turnover_array * self._slippage_costs(
+            cost=self.cost, horizon=horizon, numpy_seed=seed
         )
+        portfolio_returns = np.einsum("ij,ij->i", weights_array, test_data)
         portfolio_returns -= costs_array
-        # Finding dates array from test data
+        # Finding timeline array from test data
         # NOTE: the first value is excluded since pct_change() drops the first date for return construction
-        dates = self.test.index.to_numpy()[1:]
+        timeline_array = self.test.index.to_numpy()[1:]
 
         return {
             "returns": portfolio_returns,
             "weights": weights_array,
             "costs": costs_array,
-            "timeline": dates,
+            "timeline": timeline_array,
         }
 
     def get_metrics(self, returns):
@@ -413,8 +492,8 @@ class Backtester:
         !!! example "Example:"
             ```python
             # Importing portfolio method and backtester
-            from opes.objectives.markowitz import MaxSharpe
-            from opes.backtester import Backtester
+            from opes.objectives import MaxSharpe
+            from opes import Backtester
 
             # Place holder for your price data
             from some_random_module import trainData, testData
@@ -513,8 +592,8 @@ class Backtester:
         !!! example "Example:"
             ```python
             # Importing portfolio methods and backtester
-            from opes.objectives.markowitz import MaxMean, MeanVariance
-            from opes.backtester import Backtester
+            from opes.objectives import MaxMean, MeanVariance
+            from opes import Backtester
 
             # Place holder for your price data
             from some_random_module import trainData, testData
@@ -530,9 +609,9 @@ class Backtester:
             # Initializing Backtest with constant costs
             tester = Backtester(train_data=training, test_data=testing)
 
-            # Obtaining returns array from backtest for both optimizers (Monthly Rebalancing)
-            scenario_1 = tester.backtest(optimizer=maxmeanl2, rebalance_freq=21)
-            scenario_2 = tester.backtest(optimizer=mvo1_5, rebalance_freq=21)['returns']
+            # Obtaining returns array from backtest for both optimizers
+            scenario_1 = tester.backtest(optimizer=maxmeanl2)
+            scenario_2 = tester.backtest(optimizer=mvo1_5)['returns']
 
             # Plotting wealth
             tester.plot_wealth(

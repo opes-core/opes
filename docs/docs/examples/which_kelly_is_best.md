@@ -6,7 +6,7 @@ The Kelly Criterion, proposed by John Larry Kelly Jr., is the mathematically opt
 There are numerous variants of the Kelly Criterion introduced to combat this fragile dependency, such as fractional Kelly, popularized by Ed Thorpe, and distributionally robust Kelly models. In this example, we compare several of the most well-known Kelly variants under identical out-of-sample conditions, evaluating their realized performance and wealth dynamics using `opes`.
 
 !!! warning "Warning:"
-    This example may be computationally heavy because of multiple optimization models running with a low `rebalance_freq=5`. If you prefer better performance, increase `rebalance_freq` to monthly (`21`) or any value much greater than `5`.
+    This example may be computationally heavy because of multiple optimization models running with a low `reopt_freq=5`. If you prefer better performance, increase `reopt_freq` to monthly (`21`) or any value much greater than `5`.
 
 ---
 
@@ -121,7 +121,7 @@ for distributionally robust variants, we utilize `KLradius` for the ambiguity ra
 
 ## Backtesting
 
-Using the `Backtester` class from `opes`, we backtest these strategies under a constant, but high, cost of 20 bps and `rebalance_freq=5` (weekly). Oh, and we clean weights too.
+Using the `Backtester` class from `opes`, we backtest these strategies under a constant, but high, cost of 20 bps and `reopt_freq=5` (weekly). `rebalance_freq` is defaulted to `1`. Oh, and we clean weights too.
 
 ```python
 # A constant slippage backtest
@@ -129,12 +129,12 @@ tester = Backtester(train_data=train, test_data=test, cost={'const' : 20})
 
 # Obtaining returns
 # For now, weights and costs dont matter, so we discard them
-ck_scenario = tester.backtest(optimizer=classic_kelly, rebalance_freq=5, clean_weights=True)['returns']
-hk_scenario = tester.backtest(optimizer=half_kelly, rebalance_freq=5, clean_weights=True)['returns']
-qk_scenario = tester.backtest(optimizer=quarter_kelly, rebalance_freq=5, clean_weights=True)['returns']
-kldrk_scenario = tester.backtest(optimizer=kldr_kelly, rebalance_freq=5, clean_weights=True)['returns']
-kldrhk_scenario = tester.backtest(optimizer=kldr_halfkelly, rebalance_freq=5, clean_weights=True)['returns']
-kldrqk_scenario = tester.backtest(optimizer=kldr_quarterkelly, rebalance_freq=5, clean_weights=True)['returns']
+ck_scenario = tester.backtest(optimizer=classic_kelly, reopt_freq=5, clean_weights=True)['returns']
+hk_scenario = tester.backtest(optimizer=half_kelly, reopt_freq=5, clean_weights=True)['returns']
+qk_scenario = tester.backtest(optimizer=quarter_kelly, reopt_freq=5, clean_weights=True)['returns']
+kldrk_scenario = tester.backtest(optimizer=kldr_kelly, reopt_freq=5, clean_weights=True)['returns']
+kldrhk_scenario = tester.backtest(optimizer=kldr_halfkelly, reopt_freq=5, clean_weights=True)['returns']
+kldrqk_scenario = tester.backtest(optimizer=kldr_quarterkelly, reopt_freq=5, clean_weights=True)['returns']
 ```
 
 ---

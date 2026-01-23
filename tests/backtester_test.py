@@ -250,8 +250,10 @@ def test_backtest_engine(prices_df):
             # Executing static backtest
             static_details = test_backtester.backtest(opt)
 
-            # Executing rolling backtest (Daily rebalancing)
-            rolling_details = test_backtester.backtest(opt, rebalance_freq=1)
+            # Executing rolling backtest (Daily rebalancing & reoptimization)
+            rolling_details = test_backtester.backtest(
+                opt, rebalance_freq=1, reopt_freq=1
+            )
 
             # Getting static and rolling results
             static_results = validate_backtest_results(static_details)

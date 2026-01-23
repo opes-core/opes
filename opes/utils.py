@@ -61,68 +61,6 @@ def find_constraint(bounds, constraint_type=1):
     return constraint_list
 
 
-# Slippage function
-def slippage(weights, returns, cost, numpy_seed=None):
-    numpy_rng = np.random.default_rng(numpy_seed)
-    turnover_array = np.zeros(len(weights))
-    # Loop range is from 1 to horizon. Rebalancing happens from t=1
-    for i in range(1, len(weights)):
-        w_current = weights[i]
-        w_prev = weights[i - 1]
-        w_realized = (w_prev * (1 + returns[i])) / (1 + np.sum(w_prev * returns[i]))
-        turnover = np.sum(np.abs(w_current - w_realized))
-        turnover_array[i] = turnover
-    # Deciding slippage model using cost key
-    cost_key = next(iter(cost)).lower()
-    cost_params = cost[cost_key]
-    # Constant slippage
-    if cost_key == "const":
-        return turnover_array * cost_params / 10000
-    horizon = len(turnover_array)
-    # Gamma distributed slippage
-    if cost_key == "gamma":
-        return (
-            turnover_array
-            * numpy_rng.gamma(shape=cost_params[0], scale=cost_params[1], size=horizon)
-            / 10000
-        )
-    # Lognormally distributed slippage
-    elif cost_key == "lognormal":
-        return (
-            turnover_array
-            * numpy_rng.lognormal(
-                mean=cost_params[0], sigma=cost_params[1], size=horizon
-            )
-            / 10000
-        )
-    # Inverse gaussian slippage
-    elif cost_key == "inversegaussian":
-        return (
-            turnover_array
-            * numpy_rng.wald(mean=cost_params[0], scale=cost_params[1], size=horizon)
-            / 10000
-        )
-    # Compound poisson slippage (jump process)
-    elif cost_key == "jump":
-        N = numpy_rng.poisson(cost_params[0], size=horizon)
-        jump_cost = np.array(
-            [
-                (
-                    np.sum(
-                        numpy_rng.lognormal(
-                            mean=cost_params[1], sigma=cost_params[2], size=n
-                        )
-                    )
-                    if n > 0
-                    else 0
-                )
-                for n in N
-            ]
-        )
-        return turnover_array * jump_cost / 10000
-    raise DataError(f"Unknown cost model: {cost_key}")
-
-
 # Data integrity checker
 def test_integrity(
     tickers,
