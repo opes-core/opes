@@ -23,7 +23,7 @@ class HierarchicalRiskParity(cluster_method='average')
 
 Hierarchical Risk Parity (HRP) optimization.
 
-Hierarchical Risk Parity (HRP), introduced by L≤pez de Prado,
+Hierarchical Risk Parity (HRP), introduced by Lopez de Prado,
 is a portfolio construction methodology that allocates capital
 through hierarchical clustering and recursive risk balancing
 rather than direct optimization of a scalar objective. HRP

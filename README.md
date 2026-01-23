@@ -12,6 +12,12 @@ Visit the [documentation](https://opes.pages.dev) for detailed insights on OPES.
 
 ---
 
+## Project Methodology
+
+This project follows an Agile development approach. Every feature is designed to be extensible, exploratory and open to modification as the system evolves. Each GitHub commit represents a usable and coherent version of OPES. While not every commit is feature-complete or fully refined, each serves as a stable minimum viable product and a reliable snapshot of progress. Features marked as *experimental* are subject to active evaluation and will be either validated and promoted or removed entirely based on feasibility and empirical performance.
+
+---
+
 ## Disclaimer
 
 The information provided by OPES is for educational, research and informational purposes only. It is not intended as financial, investment or legal advice. Users should conduct their own due diligence and consult with licensed financial professionals before making any investment decisions. OPES and its contributors are not liable for any financial losses or decisions made based on this content. Past performance is not indicative of future results.
@@ -192,16 +198,3 @@ GOOG, AAPL, AMZN, MSFT
 ```
 
 The price data is stored in the `prices.csv` file within the `tests/` directory. The number of tickers are limited to 4 since there are computationally heavy portfolio objectives (like `UniversalPortfolios`) included which may take an eternity to test well using multiple tickers.
-
-Also it eats up RAM like pac-man.
-
----
-
-## Upcoming Features (Unconfirmed)
-
-These features are still in the works and may or may not appear in later updates:
-
-| **Objective Name (Category)**                    |
-| ------------------------------------------------ |             
-| Online Newton Step (Online Learning)             | 
-| ADA-BARRONS (Online Learning)                    |

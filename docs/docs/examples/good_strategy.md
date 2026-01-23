@@ -95,10 +95,16 @@ tester = Backtester(train_data=train, test_data=test, cost={'gamma' : (5, 1)})
 
 # Obtaining returns
 # For now, weights and costs dont matter, so we discard them
-return_scenario = tester.backtest(optimizer=mvo_ra08, rebalance_freq=1, clean_weights=True, seed=100)['returns']
+return_scenario = tester.backtest(
+    optimizer=mvo_ra08, 
+    rebalance_freq=1, 
+    reopt_freq=1,
+    clean_weights=True, 
+    seed=100
+)['returns']
 ```
 
-We use `rebalance_freq=1` so we can see how the portfolio adapts to changes quickly. `seed=100` gaurantees reproducibility and Gamma slippage captures asymmetric execution costs where extreme liquidity events are rare but painful. After obtaining `return_scenario` we can get the metrics and plot wealth.
+We use `rebalance_freq=1` and `reopt_freq=1` so we can see how the portfolio adapts to changes quickly. `seed=100` gaurantees reproducibility and Gamma slippage captures asymmetric execution costs where extreme liquidity events are rare but painful. After obtaining `return_scenario` we can get the metrics and plot wealth.
 
 ---
 

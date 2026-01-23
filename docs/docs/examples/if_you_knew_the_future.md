@@ -90,14 +90,14 @@ The in-sample backtester can be constructed by enforcing `train_data=test` as we
 # In-sample backtester
 # zero-cost backtesting
 tester_in_sample = Backtester(train_data=test, test_data=test, cost={'const' : 0})
-in_sample_results = tester_in_sample.backtest(optimizer=mean_variance, clean_weights=True)
+in_sample_results = tester_in_sample.backtest(optimizer=mean_variance, clean_weights=True, reopt_freq=1000)
 
 # Obtaining weights and returns from the backtest
 in_weights = in_sample_results["weights"][0]
 return_scenario_in = in_sample_results["returns"]
 ```
 
-The `rebalance_freq` parameter is defaulted to `None`, imposing a static weight backtest.
+The `rebalance_freq` parameter is defaulted to `1` and `reopt_freq` is set to `1000`, imposing a constant rebalanced backtest.
 
 ### Out-of-Sample Backtester
 
@@ -107,21 +107,21 @@ The out-of-sample backtester is normally written by feeding training and testing
 # Out-of-sample backtester
 # Zero-cost backtesting
 tester_out_of_sample = Backtester(train_data=train, test_data=test, cost={'const' : 0})
-out_of_sample_results = tester_out_of_sample.backtest(optimizer=mean_variance, clean_weights=True)
+out_of_sample_results = tester_out_of_sample.backtest(optimizer=mean_variance, clean_weights=True, reopt_freq=1000)
 
 # Obtaining weights and returns from the backtest
 out_weights = out_of_sample_results["weights"][0]
 return_scenario_out = out_of_sample_results["returns"]
 ```
 
-This is also a static weight backtest.
+This is also a constant rebalanced backtest.
 
 ### Uniform Portfolio Backtester
 
 Since uniform equal weight has constant weights, regardless of test and train data, we can use any backtester to obtain returns. Here we use `tester_in_sample`.
 
 ```python
-uniform_results = tester_in_sample.backtest(optimizer=uniform_port)
+uniform_results = tester_in_sample.backtest(optimizer=uniform_port, reopt_freq=1000)
 uniform_weights = uniform_results["weights"][0]
 uniform_scenario = uniform_results["returns"]
 ```

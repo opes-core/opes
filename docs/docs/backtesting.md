@@ -71,8 +71,9 @@ It also stores transaction cost parameters for portfolio simulations.
 ```python
 def backtest(
     optimizer,
-    rebalance_freq=None,
-    seed=None,
+    rebalance_freq=1,
+    reopt_freq=1,
+    seed=100,
     weight_bounds=None,
     clean_weights=False
 )
@@ -80,24 +81,23 @@ def backtest(
 
 Execute a portfolio backtest over the test dataset using a given optimizer.
 
-This method performs either a static-weight backtest or a rolling-weight
-backtest depending on whether `rebalance_freq` is specified. It also
-applies transaction costs and ensures no lookahead bias during rebalancing.
+This method performs a walk-forward backtest using the user defined `rebalance_freq`
+and `reopt_freq`. It also applies transaction costs and ensures no lookahead bias.
 For a rolling backtest, any common date values are dropped, the first occurrence
 is considered to be original and kept.
 
 !!! warning "Warning:"
     Some online learning methods such as `ExponentialGradient` update weights based
-    on the most recent observations. Setting `rebalance_freq` to any value other
-    than `1` (or possibly `None`) may result in suboptimal performance, as
-    intermediate data points will be ignored and not used for weight updates.
-    Proceed with caution when using other rebalancing frequencies with online learning algorithms.
+    on the most recent observations. Setting `reopt_freq` to any value other
+    than `1` may result in suboptimal performance, as intermediate data points will
+    be ignored and not used for weight updates.
 
 **Args:**
 
 - `optimizer`: An optimizer object containing the optimization strategy. Accepts both OPES built-in objectives and externally constructed optimizer objects.
-- `rebalance_freq` (*int or None, optional*): Frequency of rebalancing (re-optimization) in time steps. If `None`, a static weight backtest is performed. Defaults to `None`.
-- `seed` (*int or None, optional*): Random seed for reproducible cost simulations. Defaults to `None`.
+- `rebalance_freq` (*int, optional*): Frequency of rebalancing in time steps. Must be `>= 1`. Defaults to `1`.
+- `reopt_freq` (*int, optional*): Frequency of re-optimization in time steps. Must be `>= 1`. Defaults to `1`.
+- `seed` (*int or None, optional*): Random seed for reproducible cost simulations. Defaults to `100`.
 - `weight_bounds` (*tuple, optional*): Bounds for portfolio weights passed to the optimizer if supported.
 
 !!! abstract "Rules for `optimizer` Object"
@@ -107,24 +107,35 @@ is considered to be original and kept.
         - `**kwargs`: For safety against breaking changes.
     - `optimize` must output weights for the timestep.
 
+!!! note "Note"
+    - Re-optimization does not automatically imply rebalancing. When the portfolio is re-optimized at a given timestep, weights may or may not be updated depending on the value of `rebalance_freq`.
+    - To ensure a coherent backtest, a common practice is to choose frequencies such that `reopt_freq % rebalance_freq == 0`. This guarantees that whenever optimization occurs, a rebalance is also performed. 
+    - Also note that within a given timestep, rebalancing, if it occurs, is performed after optimization when optimization is scheduled for that timestep.
+
+!!! tip "Tip"
+    Common portfolio styles can be constructed by appropriate choices of `rebalance_freq` and `reopt_freq`:
+
+    - Buy-and-Hold: `rebalance_freq > horizon`, `reopt_freq > horizon`
+    - Constantly Rebalanced: `rebalance_freq = 1`, `reopt_freq > horizon`
+    - Fully Dynamic: `rebalance_freq = 1`, `reopt_freq = 1`
+
 **Returns:**
 
 - `dict`: Backtest results containing the following keys:
     - `'returns'` (*np.ndarray*): Portfolio returns after accounting for costs.
     - `'weights'` (*np.ndarray*): Portfolio weights at each timestep.
     - `'costs'` (*np.ndarray*): Transaction costs applied at each timestep.
-    - `'dates'` (*np.ndarray*): Dates on which the backtest was conducted.
+    - `'timeline'` (*np.ndarray*): Timeline on which the backtest was conducted.
 
 **Raises**
 
 - `DataError`: If the optimizer does not accept weight bounds but `weight_bounds` are provided.
 - `PortfolioError`: If input validation fails (via `_backtest_integrity_check`).
+- `OptimizationError`: If the underlying optimizer uses optimization and if it fails to optimize.
 
 
 !!! note "Notes:"
     - All returned arrays are aligned in time and have length equal to the test dataset.
-    - Static weight backtest: Uses a single set of optimized weights for all test data. This denotes a constant rebalanced portfolio.
-    - Rolling weight backtest: Re-optimizes weights at intervals defined by `rebalance_freq` using only historical data up to the current point to prevent lookahead bias.
     - Returns and weights are stored in arrays aligned with test data indices.
 
 !!! example "Example:"
@@ -132,8 +143,8 @@ is considered to be original and kept.
     import numpy as np
 
     # Importing necessary OPES modules
-    from opes.objectives.utility_theory import Kelly
-    from opes.backtester import Backtester
+    from opes.objectives import Kelly
+    from opes import Backtester
 
     # Place holder for your price data
     from some_random_module import trainData, testData
@@ -149,7 +160,11 @@ is considered to be original and kept.
     tester = Backtester(train_data=training, test_data=testing)
 
     # Obtaining backtest data for kelly optimizer
-    kelly_backtest = tester.backtest(optimizer=kelly_optimizer, rebalance_freq=21)
+    kelly_backtest = tester.backtest(
+        optimizer=kelly_optimizer,
+        rebalance_freq=1,  # Rebalance daily
+        reopt_freq=21      # Re-optimize monthly
+    )
 
     # Printing results
     for key in kelly_backtest:
@@ -214,8 +229,8 @@ commonly used in finance, including volatility, drawdowns and tail risk metrics.
 !!! example "Example:"
     ```python
     # Importing portfolio method and backtester
-    from opes.objectives.markowitz import MaxSharpe
-    from opes.backtester import Backtester
+    from opes.objectives import MaxSharpe
+    from opes import Backtester
 
     # Place holder for your price data
     from some_random_module import trainData, testData
@@ -280,8 +295,8 @@ a file.
 !!! example "Example:"
     ```python
     # Importing portfolio methods and backtester
-    from opes.objectives.markowitz import MaxMean, MeanVariance
-    from opes.backtester import Backtester
+    from opes.objectives import MaxMean, MeanVariance
+    from opes import Backtester
 
     # Place holder for your price data
     from some_random_module import trainData, testData
@@ -297,9 +312,9 @@ a file.
     # Initializing Backtest with constant costs
     tester = Backtester(train_data=training, test_data=testing)
 
-    # Obtaining returns array from backtest for both optimizers (Monthly Rebalancing)
-    scenario_1 = tester.backtest(optimizer=maxmeanl2, rebalance_freq=21)
-    scenario_2 = tester.backtest(optimizer=mvo1_5, rebalance_freq=21)['returns']
+    # Obtaining returns array from backtest for both optimizers
+    scenario_1 = tester.backtest(optimizer=maxmeanl2)
+    scenario_2 = tester.backtest(optimizer=mvo1_5)['returns']
 
     # Plotting wealth
     tester.plot_wealth(
