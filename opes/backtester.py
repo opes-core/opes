@@ -274,6 +274,7 @@ class Backtester:
             - `optimize` must output weights for the timestep.
 
         !!! note "Note"
+            - The backtest assumes portfolio weights are applied at the open of each timestep, with zero execution delay.
             - Re-optimization does not automatically imply rebalancing. When the portfolio is re-optimized at a given timestep, weights may or may not be updated depending on the value of `rebalance_freq`.
             - To ensure a coherent backtest, a common practice is to choose frequencies such that `reopt_freq % rebalance_freq == 0`. This guarantees that whenever optimization occurs, a rebalance is also performed.
             - Also note that within a given timestep, rebalancing, if it occurs, is performed after optimization when optimization is scheduled for that timestep.
@@ -401,8 +402,11 @@ class Backtester:
             # ---------- REBALANCING BLOCK ----------
             # Computing drifted weights
             # This is necessary for turnover and slippage modelling
+            # NOTE: weights and returns of the previous timestep are passed in to compute drifted weights
+            # This is because weights[0], which is to be set on the beginning of the  zeroth day is separately computed
+            # Therefore, as the loop starts from 1, the return from the zeroth day will cause the first drifted weights on the start of the first day (end of zeroth day)
             drifted_weights = self._compute_drifted_weights(
-                weights[t - 1], test_data[t]
+                weights[t - 1], test_data[t - 1]
             )
 
             # Assigning computed weights to weight array
