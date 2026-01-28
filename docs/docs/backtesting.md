@@ -108,8 +108,9 @@ is considered to be original and kept.
     - `optimize` must output weights for the timestep.
 
 !!! note "Note"
+    - The backtest assumes portfolio weights are applied at the open of each timestep, with zero execution delay.
     - Re-optimization does not automatically imply rebalancing. When the portfolio is re-optimized at a given timestep, weights may or may not be updated depending on the value of `rebalance_freq`.
-    - To ensure a coherent backtest, a common practice is to choose frequencies such that `reopt_freq % rebalance_freq == 0`. This guarantees that whenever optimization occurs, a rebalance is also performed. 
+    - To ensure a coherent backtest, a common practice is to choose frequencies such that `reopt_freq % rebalance_freq == 0`. This guarantees that whenever optimization occurs, a rebalance is also performed.
     - Also note that within a given timestep, rebalancing, if it occurs, is performed after optimization when optimization is scheduled for that timestep.
 
 !!! tip "Tip"
