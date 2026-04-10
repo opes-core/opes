@@ -632,6 +632,7 @@ class Backtester:
         plt.figure(figsize=(12, 6))
         for name, returns in returns_dict.items():
             wealth = initial_wealth * np.cumprod(1 + returns)
+            timeline = timeline if timeline is not None else range(len(returns))
             plt.plot(timeline, wealth, label=name, linewidth=2)
         plt.yscale("log")
         plt.axhline(y=1, color="black", linestyle=":", label="Breakeven")
