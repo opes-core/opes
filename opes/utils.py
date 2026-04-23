@@ -91,7 +91,7 @@ def test_integrity(
             )
         try:
             np.linalg.inv(cov)
-        except np.linal.LinAlgError:
+        except np.linalg.LinAlgError:
             raise DataError(f"Singular covariance matrix")
     if weights is not None:
         if not all_elements_are_type(np.array(weights).flatten(), Real):
